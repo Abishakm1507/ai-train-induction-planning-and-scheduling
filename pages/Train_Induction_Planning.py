@@ -3,9 +3,6 @@ import numpy as np
 import joblib
 import os
 
-# -------------------------------
-# Page Config
-# -------------------------------
 st.set_page_config(
     page_title="AI Train Induction Planning",
     layout="wide"
@@ -14,9 +11,6 @@ st.set_page_config(
 st.title("🚆 AI-Assisted Train Induction Planning")
 st.caption("Decision-support system for metro scheduling & headway optimization")
 
-# -------------------------------
-# Load RL Q-table (if available)
-# -------------------------------
 Q_TABLE_PATH = "./model/rl_q_table.pkl"
 
 if os.path.exists(Q_TABLE_PATH):
@@ -26,9 +20,6 @@ else:
     q_table = {}
     rl_available = False
 
-# -------------------------------
-# UI Layout
-# -------------------------------
 left, right = st.columns([2, 3])
 
 with left:
@@ -46,9 +37,6 @@ with left:
 
         generate = st.button("🤖 Generate AI Plan", use_container_width=True)
 
-# -------------------------------
-# RL Decision Logic
-# -------------------------------
 def rl_train_planner(predicted_demand, peak, available_trains):
     """
     RL-based train induction planner
@@ -87,15 +75,11 @@ def rl_train_planner(predicted_demand, peak, available_trains):
 
     return deploy, headway, expected_wait, risk
 
-# -------------------------------
-# Output Panel
-# -------------------------------
 with right:
     st.subheader("📊 AI Output Preview")
 
     if generate:
 
-        # Simulated demand (replace with ML model later)
         predicted_demand = np.random.randint(1500, 6500)
 
         deploy, headway, wait_time, risk = rl_train_planner(
