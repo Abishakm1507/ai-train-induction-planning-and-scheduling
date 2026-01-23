@@ -7,11 +7,9 @@ import os
 import requests
 import google.generativeai as genai
 
-# -------------------- LLM CONFIG --------------------
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key="AIzaSyDg9zY1gnRhrMjRYDBdldzYAuWJd8jok4A")
 llm = genai.GenerativeModel("gemini-2.5-flash")
 
-# -------------------- LOAD MODELS --------------------
 model = joblib.load("./model/demand_forecast_model.pkl")
 features = joblib.load("./model/model_features.pkl")
 
@@ -22,7 +20,6 @@ except:
     q_table = {}
     rl_ready = False
 
-# -------------------- CONSTANTS --------------------
 TRAIN_CAPACITY = 1000
 MIN_TRAINS = 2
 MAX_TRAINS = 10
@@ -33,7 +30,6 @@ STATIONS = [
     "Kaloor", "MG Road", "Maharaja’s", "Ernakulam South"
 ]
 
-# -------------------- WEATHER --------------------
 def get_weather_data(city="Kochi"):
     api_key = os.getenv("WEATHER_API_KEY")
     url = f"http://api.weatherapi.com/v1/current.json?key={api_key}&q={city}&aqi=no"
@@ -59,7 +55,6 @@ def weather_demand_multiplier(w):
         factor -= 0.05
     return factor
 
-# -------------------- RL --------------------
 def get_demand_level(demand):
     if demand < 3000:
         return 0
@@ -74,7 +69,6 @@ def rl_train_induction(predicted_demand, is_peak):
     q_vals = [q_table.get((state, a), 0) for a in actions]
     return actions[np.argmax(q_vals)]
 
-# -------------------- LLM EXPLANATION --------------------
 def generate_llm_explanation(demand, trains, weather, is_peak):
     prompt = f"""
 Explain the metro operational decision.
@@ -93,7 +87,6 @@ Instructions:
 """
     return llm.generate_content(prompt).text.strip()
 
-# -------------------- UI --------------------
 st.set_page_config(page_title="KMRL AI Operations Dashboard", layout="wide")
 st.title("🚆 Kochi Metro – AI Operations Control Dashboard")
 st.caption("Weather-Aware Demand Forecasting & Train Induction")
@@ -111,7 +104,6 @@ is_peak = 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0
 predicted_demand = 0
 recommended_trains = 0
 
-# -------------------- RUN PIPELINE --------------------
 if run_ai:
     input_df = pd.DataFrame([{
         "hour": hour,
@@ -129,7 +121,6 @@ if run_ai:
     predicted_demand = int(base_demand * weather_factor)
     recommended_trains = rl_train_induction(predicted_demand, is_peak)
 
-# -------------------- LAYOUT --------------------
 left, center, right = st.columns([2.2, 3, 2])
 
 with left:
@@ -145,7 +136,7 @@ with right:
     st.subheader("📊 KPIs")
     if run_ai:
         avg_wait = max(2, 12 - recommended_trains)
-        load_pct = int((predicted_demand / (recommended_trains * TRAIN_CAPACITY)) * 100)
+        load_pct = min( 100, int((predicted_demand / (recommended_trains * TRAIN_CAPACITY)) * 100))
         energy = max(60, 100 - recommended_trains * 4)
         comfort = max(50, 100 - load_pct)
 
@@ -159,7 +150,6 @@ with right:
         st.metric("⚡ Energy", "-")
         st.metric("🙂 Comfort", "-")
 
-# -------------------- RECOMMENDATION (WITH WEATHER) --------------------
 with center:
     st.subheader("🤖 AI Recommendation")
 
@@ -187,7 +177,6 @@ with center:
     else:
         st.info("Run AI to generate recommendation")
 
-# -------------------- TREND --------------------
 st.subheader("📈 Passenger Demand Trend")
 
 hours = list(range(24))
