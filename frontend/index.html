@@ -552,13 +552,13 @@
             </div>
         </div>
     </div>
-    // Insert RL/weather logic script block here 
     <script>
     const MIN_TRAINS = 2;
     const MAX_TRAINS = 20;
+    const API_BASE = "http://localhost:8000/api";
 
-    // Simulated weather fetch
-    async function getWeatherData(city="Kochi") {
+    // ========== WEATHER API ==========
+    async function getWeatherData(city = "Kochi") {
         try {
             const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=YOUR_WEATHER_API_KEY&q=${city}&aqi=no`);
             const d = await res.json();
@@ -567,12 +567,66 @@
                 rain_mm: d.current.precip_mm,
                 condition: d.current.condition.text
             };
-        } catch(e) {
+        } catch (e) {
             return { temp: 28, rain_mm: 0, condition: "Clear" };
         }
     }
 
-    // Weather-based demand multiplier
+    // ========== DEMAND FORECASTING API ==========
+    async function fetchDemandForecast(hour, isWeekend, isPeak, trainsPerHour, directionId) {
+        try {
+            const response = await fetch(`${API_BASE}/demand/predict`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    hour,
+                    is_weekend: isWeekend,
+                    is_peak_hour: isPeak ? 1 : 0,
+                    trains_per_hour: trainsPerHour,
+                    direction_id: directionId
+                })
+            });
+            const data = await response.json();
+            return {
+                estimated_demand: data.predicted_demand || 5000,
+                weather_factor: 1.0
+            };
+        } catch (e) {
+            console.error("Demand API Error:", e);
+            return { estimated_demand: 5000, weather_factor: 1.0 };
+        }
+    }
+
+    // ========== TRAIN INDUCTION API ==========
+    async function fetchTrainRecommendation(predictedDemand, isPeak) {
+        try {
+            const response = await fetch(`${API_BASE}/induction/recommend`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    predicted_demand: predictedDemand,
+                    is_peak_hour: isPeak ? 1 : 0
+                })
+            });
+            return await response.json();
+        } catch (e) {
+            console.error("Induction API Error:", e);
+            return { recommended_trains: 5, confidence: 78, policy: "error" };
+        }
+    }
+
+    // ========== SURGE DETECTION ==========
+    function detectSurge(predictedDemand, threshold = 7000) {
+        if (predictedDemand >= threshold) {
+            return { surge: true, severity: "High" };
+        } else if (predictedDemand >= threshold * 0.8) {
+            return { surge: true, severity: "Medium" };
+        } else {
+            return { surge: false, severity: "Low" };
+        }
+    }
+
+    // ========== WEATHER-BASED DEMAND MULTIPLIER ==========
     function weatherDemandMultiplier(weather) {
         let factor = 1.0;
         if (weather.rain_mm > 5) factor += 0.2;
@@ -581,31 +635,20 @@
         return factor;
     }
 
-    // Simple demand level for RL state
+    // ========== DEMAND LEVEL DISCRETIZATION ==========
     function getDemandLevel(demand) {
         if (demand < 3000) return 0;
         if (demand < 6000) return 1;
         return 2;
     }
 
-    // RL Q-table-based train recommendation (dummy for demo)
-    const q_table = {}; // You can load real values here
-    function rlTrainInduction(predictedDemand, isPeak) {
-        const state = [getDemandLevel(predictedDemand), isPeak];
-        const actions = Array.from({length: MAX_TRAINS-MIN_TRAINS+1}, (_, i) => i+MIN_TRAINS);
-        const q_vals = actions.map(a => q_table[[state,a]] || Math.random()); // demo random Q
-        return actions[q_vals.indexOf(Math.max(...q_vals))];
-    }
-
-    // Generate a textual explanation
+    // ========== GENERATE EXPLANATION ==========
     function generateExplanation(demand, trains, weather, isPeak) {
-        return `Based on a predicted passenger demand of ${demand}, deploying ${trains} trains is recommended. Weather conditions (${weather.condition}, ${weather.rain_mm}mm rain, ${weather.temp}°C) slightly ${weather.rain_mm>5 ? 'increase' : 'decrease'} the demand. Peak hour status: ${isPeak ? 'Yes' : 'No'}.`;
+        return `Based on predicted passenger demand of ${demand}, deploying ${trains} trains is recommended. Weather: ${weather.condition}, ${weather.rain_mm}mm rain, ${weather.temp}°C. Peak hour: ${isPeak ? 'Yes' : 'No'}.`;
     }
     </script>
 
     <script>
-        
-        const API_BASE = "http://localhost:8000/api";
         
         /* ---------------- TAB SWITCH ---------------- */
         function switchTab(index) {
@@ -681,94 +724,400 @@
             document.getElementById("unavailableDisplay").innerText = val;
         }
         
-        /* ---------------- MAIN AI FLOW ---------------- */
-        // Replace the original runAI() with your new logic
+        /* ---------------- MAIN AI FLOW (WITH BACKEND INTEGRATION) ---------------- */
         async function runAI() {
             const hour = parseInt(document.getElementById("hour").value);
             const dayType = document.getElementById("dayType").value;
             const trainsPerHour = parseInt(document.getElementById("trainsPerHour").value);
             const direction = parseInt(document.getElementById("direction").value);
-            const isWeekend = dayType === "Weekend" ? 1 : 0;
-            const isPeak = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
+            const isWeekend = dayType === "weekend" ? 1 : 0;
+            const isPeak = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20) ? 1 : 0;
 
-            // 1️⃣ Fetch weather
-            const weather = await getWeatherData();
+            // Show loading state
+            document.getElementById("aiRecommendation").innerHTML = `<div class="info-box">⏳ Processing AI decision...</div>`;
 
-            // 2️⃣ Predict base demand (mocked here, replace with your AI call)
-            const baseDemand = trainsPerHour * 800; // dummy linear logic
-            const demandMultiplier = weatherDemandMultiplier(weather);
-            const predictedDemand = Math.round(baseDemand * demandMultiplier);
+            try {
+                // 1️⃣ Fetch weather
+                const weather = await getWeatherData();
 
-            // 3️⃣ RL-based train recommendation
-            const recommendedTrains = rlTrainInduction(predictedDemand, isPeak);
+                // 2️⃣ Call Demand Forecasting API
+                const demandResult = await fetchDemandForecast(hour, isWeekend, isPeak, trainsPerHour, direction);
+                const predictedDemand = demandResult.estimated_demand || 5000;
 
-            // 4️⃣ LLM or static explanation
-            const explanation = generateExplanation(predictedDemand, recommendedTrains, weather, isPeak);
+                // 3️⃣ Call Train Induction API (RL-based)
+                const inductionResult = await fetchTrainRecommendation(predictedDemand, isPeak);
+                const recommendedTrains = inductionResult.recommended_trains;
+                const confidence = inductionResult.confidence;
+                const policy = inductionResult.policy;
 
-            // 5️⃣ Update AI Recommendation card
-            document.getElementById("aiRecommendation").innerHTML = `
-                <div class="success-box">
-                    <strong>Recommended Trains:</strong> ${recommendedTrains}<br>
-                    <strong>Predicted Demand:</strong> ${predictedDemand} passengers<br>
-                    <strong>Direction:</strong> ${direction === 0 ? "Aluva → Ernakulam" : "Ernakulam → Aluva"}<br><br>
-                    <strong>Weather:</strong> ${weather.condition}, ${weather.rain_mm}mm rain, ${weather.temp}°C<br>
-                    <strong>Demand Multiplier:</strong> ${demandMultiplier.toFixed(2)}×<br><br>
-                    ${explanation}
-                </div>
-            `;
+                // 4️⃣ Detect surges
+                const surgeStatus = detectSurge(predictedDemand);
 
-            updateKPIs(predictedDemand);
-            updateChart(predictedDemand);
-            updateMetroLineStatus();
+                // 5️⃣ Calculate multiplier
+                const demandMultiplier = weatherDemandMultiplier(weather);
+
+                // 6️⃣ Update AI Recommendation card with all backend data
+                let surgeAlert = '';
+                if (surgeStatus.surge) {
+                    surgeAlert = `<div class="warning-box">⚠️ <strong>SURGE DETECTED:</strong> ${surgeStatus.severity} intensity. Extra trains may be needed.</div>`;
+                }
+
+                document.getElementById("aiRecommendation").innerHTML = `
+                    ${surgeAlert}
+                    <div class="success-box">
+                        <strong>✓ AI Decision Generated</strong><br>
+                        <strong>Recommended Trains/Hour:</strong> ${recommendedTrains}<br>
+                        <strong>Confidence Level:</strong> ${confidence}%<br>
+                        <strong>Policy Used:</strong> ${policy === 'reinforcement-learning' ? '🤖 Reinforcement Learning' : '📋 Rule-Based'}<br><br>
+                        
+                        <strong>Predicted Passenger Demand:</strong> ${Math.round(predictedDemand)} passengers<br>
+                        <strong>Direction:</strong> ${direction === 0 ? "Aluva → Ernakulam" : "Ernakulam → Aluva"}<br><br>
+                        
+                        <strong>Weather Impact:</strong><br>
+                        • Condition: ${weather.condition}<br>
+                        • Rainfall: ${weather.rain_mm}mm<br>
+                        • Temperature: ${weather.temp}°C<br>
+                        • Demand Multiplier: ${demandMultiplier.toFixed(2)}×<br><br>
+                        
+                        <strong>Headway (minutes):</strong> ${Math.round(60 / recommendedTrains)}<br>
+                        <strong>Peak Hour:</strong> ${isPeak ? 'Yes' : 'No'}
+                    </div>
+                `;
+
+                updateKPIs(predictedDemand, recommendedTrains);
+                updateChart(predictedDemand, hour);
+                updateMetroLineStatus();
+
+            } catch (error) {
+                console.error("AI Flow Error:", error);
+                document.getElementById("aiRecommendation").innerHTML = `
+                    <div class="error-box">
+                        <strong>❌ Error:</strong> Backend service unavailable. Please ensure the FastAPI server is running at ${API_BASE}
+                    </div>
+                `;
+            }
         }
         
-        /* ---------------- KPI UPDATE ---------------- */
-        function updateKPIs(demand) {
+        /* ---------------- KPI UPDATE (WITH BACKEND DATA) ---------------- */
+        function updateKPIs(demand, trains) {
             const metrics = document.querySelectorAll(".metric-value");
-            metrics[0].innerText = `${Math.max(2, 12 - demand / 1000).toFixed(1)} min`;
-            metrics[1].innerText = `${Math.min(100, demand / 80).toFixed(0)}%`;
-            metrics[2].innerText = `${(demand / 50).toFixed(0)} kWh`;
-            metrics[3].innerText = demand < 5000 ? "😊 High" : "😐 Medium";
+            const waitingTime = Math.max(2, 12 - demand / 1000);
+            const loadPercentage = Math.min(100, demand / 80);
+            const energyConsumption = (demand / 50) * trains;
+            const comfortLevel = demand < 5000 ? "😊 High" : (demand < 7000 ? "😐 Medium" : "😟 Low");
+            
+            metrics[0].innerText = `${waitingTime.toFixed(1)} min`;
+            metrics[1].innerText = `${loadPercentage.toFixed(0)}%`;
+            metrics[2].innerText = `${energyConsumption.toFixed(0)} kWh`;
+            metrics[3].innerText = comfortLevel;
         }
         
-        /* ---------------- CHART ---------------- */
+        /* ---------------- CHART (WITH TIME SERIES) ---------------- */
         let demandChart;
         
-        function updateChart(value) {
+        function updateChart(value, currentHour) {
             const ctx = document.getElementById("demandChart").getContext("2d");
         
             if (demandChart) demandChart.destroy();
         
+            // Generate next 5 hours of projected demand
+            const labels = [];
+            const data = [];
+            for (let i = 0; i < 5; i++) {
+                const hour = (currentHour + i) % 24;
+                labels.push(`${hour}:00`);
+                // Simulate demand based on hour (peak hours 8-10, 17-20)
+                const isPeakHour = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
+                const variance = isPeakHour ? 1.2 : (hour >= 6 && hour <= 22 ? 1.0 : 0.3);
+                data.push(value * variance * (0.9 + i * 0.05));
+            }
+        
             demandChart = new Chart(ctx, {
                 type: "line",
                 data: {
-                    labels: ["Now", "+15m", "+30m", "+45m", "+60m"],
+                    labels: labels,
                     datasets: [{
-                        data: [
-                            value * 0.9,
-                            value,
-                            value * 1.05,
-                            value * 1.1,
-                            value * 1.15
-                        ],
+                        label: "Predicted Passenger Demand",
+                        data: data,
+                        borderColor: "#667eea",
+                        backgroundColor: "rgba(102, 126, 234, 0.1)",
                         borderWidth: 2,
-                        fill: false
+                        fill: true,
+                        tension: 0.3
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { display: false } }
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            display: true,
+                            labels: { color: "#495057", font: { size: 12 } }
+                        } 
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: "#6c757d" },
+                            grid: { color: "rgba(0,0,0,0.05)" }
+                        },
+                        x: {
+                            ticks: { color: "#6c757d" },
+                            grid: { color: "rgba(0,0,0,0.05)" }
+                        }
+                    }
                 }
             });
         }
         
-        /* ---------------- PLACEHOLDERS ---------------- */
-        function generatePlan() {
-            alert("Train Planning is already handled in Operations Control tab.");
+        /* ---------------- DEMAND ANALYTICS (WITH API) ---------------- */
+        async function runDemandAnalytics() {
+            const dayType = document.getElementById("analyticsDayType").value;
+            const timeStart = parseInt(document.getElementById("timeStart").value);
+            const timeEnd = parseInt(document.getElementById("timeEnd").value);
+            const isWeekend = dayType === "weekend" ? 1 : 0;
+
+            document.getElementById("heatmapContainer").innerHTML = `<div class="info-box">⏳ Loading demand analytics...</div>`;
+
+            try {
+                // Fetch demand data for each hour
+                const heatmapData = [];
+                const stations = [
+                    "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
+                    "Muttom", "Kalamassery", "CUSAT", "Edappally",
+                    "Kaloor", "MG Road", "Maharaja's", "Ernakulam South"
+                ];
+
+                for (let hour = timeStart; hour <= timeEnd; hour++) {
+                    const isPeak = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20) ? 1 : 0;
+                    const result = await fetchDemandForecast(hour, isWeekend, isPeak, 5, 0);
+                    heatmapData.push({
+                        hour: hour,
+                        demand: result.estimated_demand || 5000
+                    });
+                }
+
+                // Generate heatmap HTML
+                let heatmapHTML = `
+                    <div class="heatmap">
+                        <div class="heatmap-row">
+                            <div class="heatmap-cell heatmap-header">Station / Hour</div>
+                            ${heatmapData.map(d => `<div class="heatmap-cell heatmap-header">${d.hour}:00</div>`).join('')}
+                        </div>
+                `;
+
+                stations.forEach(station => {
+                    heatmapHTML += `<div class="heatmap-row">
+                        <div class="heatmap-cell heatmap-label">${station}</div>`;
+                    
+                    heatmapData.forEach(d => {
+                        const intensity = Math.min(100, (d.demand / 7000) * 100);
+                        const color = getHeatmapColor(intensity);
+                        heatmapHTML += `<div class="heatmap-cell" style="background-color: ${color}; color: white;">
+                            ${Math.round(d.demand / 100)}
+                        </div>`;
+                    });
+                    
+                    heatmapHTML += `</div>`;
+                });
+
+                heatmapHTML += `</div>`;
+                document.getElementById("heatmapContainer").innerHTML = heatmapHTML;
+
+            } catch (error) {
+                console.error("Analytics Error:", error);
+                document.getElementById("heatmapContainer").innerHTML = `
+                    <div class="error-box">Error loading analytics. Backend may be unavailable.</div>
+                `;
+            }
+        }
+
+        function getHeatmapColor(intensity) {
+            // 0% = green, 50% = yellow, 100% = red
+            if (intensity < 33) return "#28a745";
+            if (intensity < 66) return "#ffc107";
+            return "#dc3545";
         }
         
-        function runSimulation() {
-            alert("Scenario simulation logic will be added here.");
+        /* ---------------- TRAIN PLANNING WITH AI (TAB 3) ---------------- */
+        async function generatePlan() {
+            const availableTrains = parseInt(document.getElementById("availableTrains").value);
+            const isPeakMode = document.getElementById("peakMode").checked ? 1 : 0;
+
+            document.getElementById("planningOutput").innerHTML = `<div class="info-box">⏳ Generating AI plan...</div>`;
+
+            try {
+                const planResults = [];
+
+                // Generate plan for different hours
+                for (let hour = 6; hour <= 22; hour++) {
+                    const isPeak = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20) ? 1 : 0;
+                    
+                    if (isPeakMode && !isPeak) continue; // Skip non-peak hours if peak mode
+                    
+                    // Get demand forecast
+                    const demandResult = await fetchDemandForecast(hour, 0, isPeak, 5, 0);
+                    const predictedDemand = demandResult.estimated_demand || 5000;
+
+                    // Get train recommendation
+                    const inductionResult = await fetchTrainRecommendation(predictedDemand, isPeak);
+                    const recommendedTrains = Math.min(inductionResult.recommended_trains, availableTrains);
+
+                    planResults.push({
+                        hour: hour,
+                        demand: predictedDemand,
+                        trains: recommendedTrains,
+                        headway: Math.round(60 / recommendedTrains)
+                    });
+                }
+
+                // Generate HTML output
+                let planHTML = `
+                    <div class="success-box">
+                        <strong>✓ AI Train Scheduling Plan Generated</strong><br>
+                        <strong>Available Trains:</strong> ${availableTrains}<br>
+                        <strong>Peak Mode:</strong> ${isPeakMode ? 'On' : 'Off'}<br><br>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    <th style="padding: 10px; text-align: left;">Hour</th>
+                                    <th style="padding: 10px; text-align: center;">Passenger Demand</th>
+                                    <th style="padding: 10px; text-align: center;">Recommended Trains</th>
+                                    <th style="padding: 10px; text-align: center;">Headway (min)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                planResults.forEach(r => {
+                    planHTML += `
+                        <tr style="border-bottom: 1px solid #dee2e6;">
+                            <td style="padding: 10px;">${r.hour}:00</td>
+                            <td style="padding: 10px; text-align: center;">${Math.round(r.demand)}</td>
+                            <td style="padding: 10px; text-align: center; font-weight: bold; color: #667eea;">${r.trains}</td>
+                            <td style="padding: 10px; text-align: center;">${r.headway}</td>
+                        </tr>
+                    `;
+                });
+
+                planHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                document.getElementById("planningOutput").innerHTML = planHTML;
+
+            } catch (error) {
+                console.error("Planning Error:", error);
+                document.getElementById("planningOutput").innerHTML = `
+                    <div class="error-box">Error generating plan. Backend unavailable.</div>
+                `;
+            }
+        }
+        
+        /* ---------------- SCENARIO SIMULATOR (TAB 4) ---------------- */
+        async function runSimulation() {
+            const demandIncrease = parseInt(document.getElementById("demandIncrease").value);
+            const unavailableTrains = parseInt(document.getElementById("unavailableTrains").value);
+            const hasRain = document.getElementById("rain").checked;
+            const hasFestival = document.getElementById("festival").checked;
+
+            document.getElementById("simulationResults").innerHTML = `<div class="info-box">⏳ Running scenario simulation...</div>`;
+
+            try {
+                // Base scenario at peak hour
+                const baseResult = await fetchDemandForecast(9, 0, 1, 5, 0);
+                const baseDemand = baseResult.estimated_demand || 5000;
+
+                // Apply multipliers
+                let scenarioDemand = baseDemand * (1 + demandIncrease / 100);
+                if (hasRain) scenarioDemand *= 1.2;
+                if (hasFestival) scenarioDemand *= 1.35;
+
+                // Get train recommendation
+                const inductionResult = await fetchTrainRecommendation(Math.round(scenarioDemand), 1);
+                const recommendedTrains = inductionResult.recommended_trains;
+                const availableTrains = 10 - unavailableTrains;
+                const canMeetDemand = recommendedTrains <= availableTrains;
+
+                // Detect surge
+                const surgeStatus = detectSurge(Math.round(scenarioDemand));
+
+                // Calculate metrics
+                const headway = Math.round(60 / recommendedTrains);
+                const waitingTime = headway / 2;
+                const crowdingLevel = Math.min(100, (scenarioDemand / 8000) * 100);
+
+                let resultHTML = `
+                    <div class="${canMeetDemand ? 'success' : 'error'}-box">
+                        <strong>${canMeetDemand ? '✓ Scenario Manageable' : '❌ Capacity Exceeded'}</strong><br>
+                        ${canMeetDemand 
+                            ? `Available trains are sufficient to handle the scenario.`
+                            : `Warning: Recommended ${recommendedTrains} trains but only ${availableTrains} available.`
+                        }
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4>📊 Simulation Results</h4>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Base Passenger Demand</span>
+                            <span class="metric-value">${Math.round(baseDemand)}</span>
+                        </div>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Scenario Demand (with multipliers)</span>
+                            <span class="metric-value">${Math.round(scenarioDemand)}</span>
+                        </div>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Demand Increase Applied</span>
+                            <span class="metric-value">${demandIncrease}%</span>
+                        </div>
+                        
+                        <h4 style="margin-top: 20px;">🚆 Train Configuration</h4>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Available Trains</span>
+                            <span class="metric-value">${availableTrains}</span>
+                        </div>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Recommended Trains</span>
+                            <span class="metric-value">${recommendedTrains}</span>
+                        </div>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Headway (minutes)</span>
+                            <span class="metric-value">${headway}</span>
+                        </div>
+                        
+                        <h4 style="margin-top: 20px;">⚠️ Impact Assessment</h4>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Average Waiting Time</span>
+                            <span class="metric-value">${waitingTime.toFixed(1)} min</span>
+                        </div>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Crowding Level</span>
+                            <span class="metric-value">${crowdingLevel.toFixed(0)}%</span>
+                        </div>
+                        <div class="metric" style="margin-bottom: 10px;">
+                            <span class="metric-label">Surge Status</span>
+                            <span class="metric-value">${surgeStatus.surge ? `⚠️ ${surgeStatus.severity}` : '✓ Normal'}</span>
+                        </div>
+
+                        <h4 style="margin-top: 20px;">🌦️ Applied Factors</h4>
+                        ${hasRain ? '<div style="padding: 8px; background: #e7f3ff; border-radius: 5px; margin-bottom: 8px;">🌧️ Rain: +20% demand</div>' : ''}
+                        ${hasFestival ? '<div style="padding: 8px; background: #fff3cd; border-radius: 5px; margin-bottom: 8px;">🎉 Festival: +35% demand</div>' : ''}
+                        ${!hasRain && !hasFestival ? '<div style="padding: 8px; background: #f8f9fa; border-radius: 5px;">No special factors applied</div>' : ''}
+                    </div>
+                `;
+
+                document.getElementById("simulationResults").innerHTML = resultHTML;
+
+            } catch (error) {
+                console.error("Simulation Error:", error);
+                document.getElementById("simulationResults").innerHTML = `
+                    <div class="error-box">Error running simulation. Backend unavailable.</div>
+                `;
+            }
         }
         </script>
         

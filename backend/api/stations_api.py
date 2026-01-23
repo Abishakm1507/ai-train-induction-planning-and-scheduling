@@ -1,50 +1,40 @@
 from fastapi import APIRouter
-from datetime import datetime
-import random
-
-router = APIRouter()
 
 # -------------------------------------------------
-# Static station list (can be DB-driven later)
+# Stations metadata
 # -------------------------------------------------
 STATIONS = [
     "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
     "Muttom", "Kalamassery", "CUSAT", "Edappally",
-    "Kaloor", "MG Road", "Maharaja’s", "Ernakulam South"
+    "Kaloor", "MG Road", "Maharaja's", "Ernakulam South"
 ]
 
 # -------------------------------------------------
-# Station status generator (mock logic)
+# FastAPI Router
 # -------------------------------------------------
-@router.get("/status")
-def get_station_status():
-    # return your status data
-    statuses = []
+router = APIRouter()
 
-    for station in STATIONS:
-        status = random.choices(
-            ["Operational", "Minor Delay", "Crowded"],
-            weights=[0.75, 0.15, 0.10]
-        )[0]
-
-        statuses.append({
-            "station": station,
-            "status": status,
-            "last_updated": datetime.now().strftime("%H:%M")
-        })
-
-    return statuses
-
-# -------------------------------------------------
-# API Endpoint
-# -------------------------------------------------
-@router.get("/status")
-def station_status():
+@router.get("/list")
+def get_stations():
     """
-    GET /api/stations/status
+    GET /api/stations/list
+    Returns list of all metro stations
     """
     return {
-        "line": "Kochi Metro",
-        "direction": "Both",
-        "stations": get_station_status()
+        "stations": STATIONS,
+        "count": len(STATIONS)
+    }
+
+@router.get("/{station_id}")
+def get_station(station_id: int):
+    """
+    GET /api/stations/{station_id}
+    Returns details of a specific station
+    """
+    if station_id < 0 or station_id >= len(STATIONS):
+        return {"error": "Station not found"}
+    
+    return {
+        "id": station_id,
+        "name": STATIONS[station_id]
     }
