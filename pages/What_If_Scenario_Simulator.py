@@ -11,9 +11,6 @@ st.set_page_config(
 st.title("🔮 What-If Scenario Simulator")
 st.caption("Strategic AI simulation for metro operational planning")
 
-# =====================================================
-# CONSTANTS (same logic as demand forecasting)
-# =====================================================
 
 STATIONS = [
     "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
@@ -27,17 +24,12 @@ BASE_TRAINS = 12
 TRAIN_CAPACITY = 1000
 BASE_HEADWAY = 4  # minutes
 
-# =====================================================
-# DEMAND PREDICTION (REUSED LOGIC)
-# =====================================================
-
 def predict_demand(selected_date):
     """
     Predict demand based on the same logic used
     in the demand forecasting dashboard
     """
 
-    # Make prediction deterministic per date
     np.random.seed(int(selected_date.strftime("%Y%m%d")))
 
     is_weekend = 1 if selected_date.weekday() >= 5 else 0
@@ -55,15 +47,7 @@ def predict_demand(selected_date):
 
     return int(total_demand)
 
-# =====================================================
-# LAYOUT
-# =====================================================
-
 left, right = st.columns([2, 3])
-
-# =====================================================
-# SCENARIO INPUTS (DATE ADDED HERE ✅)
-# =====================================================
 
 with left:
     st.subheader("⚙️ Scenario Inputs")
@@ -75,7 +59,6 @@ with left:
             value=date.today()
         )
 
-        # Auto-predict demand from date
         BASE_DEMAND = predict_demand(selected_date)
 
         demand_increase = st.slider(
@@ -97,10 +80,6 @@ with left:
             use_container_width=True
         )
 
-# =====================================================
-# SHOW AUTO-PREDICTED DEMAND
-# =====================================================
-
 with right:
     st.info(
         f"""
@@ -108,10 +87,6 @@ with right:
         👥 **AI-Predicted Base Demand:** {BASE_DEMAND}
         """
     )
-
-# =====================================================
-# SIMULATION LOGIC
-# =====================================================
 
 def simulate_scenario(demand_inc, trains_down, rain, festival):
     demand = BASE_DEMAND * (1 + demand_inc / 100)
@@ -135,10 +110,6 @@ def simulate_scenario(demand_inc, trains_down, rain, festival):
         risk = "Low"
 
     return demand, available_trains, waiting_time, energy_use, risk
-
-# =====================================================
-# RESULTS
-# =====================================================
 
 with right:
     st.subheader("📊 Simulation Results")
@@ -200,10 +171,6 @@ with right:
 
     else:
         st.info("Adjust scenario parameters and click **Run Simulation**")
-
-# =====================================================
-# UI POLISH
-# =====================================================
 
 st.markdown(
     """
