@@ -7,7 +7,7 @@ import os
 import requests
 import google.generativeai as genai
 
-genai.configure(api_key="")
+genai.configure(api_key="AIzaSyDg9zY1gnRhrMjRYDBdldzYAuWJd8jok4A")
 llm = genai.GenerativeModel("gemini-2.5-flash")
 
 model = joblib.load("./model/demand_forecast_model.pkl")
