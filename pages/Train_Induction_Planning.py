@@ -1,6 +1,11 @@
 import streamlit as st
 import numpy as np
+import joblib
+import os
 
+# -------------------------------
+# Page Config
+# -------------------------------
 st.set_page_config(
     page_title="AI Train Induction Planning",
     layout="wide"
@@ -9,6 +14,21 @@ st.set_page_config(
 st.title("🚆 AI-Assisted Train Induction Planning")
 st.caption("Decision-support system for metro scheduling & headway optimization")
 
+# -------------------------------
+# Load RL Q-table (if available)
+# -------------------------------
+Q_TABLE_PATH = "./model/rl_q_table.pkl"
+
+if os.path.exists(Q_TABLE_PATH):
+    q_table = joblib.load(Q_TABLE_PATH)
+    rl_available = True
+else:
+    q_table = {}
+    rl_available = False
+
+# -------------------------------
+# UI Layout
+# -------------------------------
 left, right = st.columns([2, 3])
 
 with left:
@@ -22,55 +42,66 @@ with left:
             value=10
         )
 
-        optimization_priority = st.radio(
-            "Optimization Priority",
-            [
-                "Minimize Waiting Time",
-                "Energy Saving",
-                "Balanced"
-            ]
-        )
-
         peak_mode = st.toggle("Peak Hour Mode", value=True)
 
         generate = st.button("🤖 Generate AI Plan", use_container_width=True)
 
-def ai_train_planner(trains, priority, peak):
+# -------------------------------
+# RL Decision Logic
+# -------------------------------
+def rl_train_planner(predicted_demand, peak, available_trains):
     """
-    AI-inspired rule-based planner
-    (Can be replaced with RL / optimization later)
+    RL-based train induction planner
+    Uses trained Q-table
     """
 
-    if priority == "Minimize Waiting Time":
-        deploy = int(trains * 0.9)
-        headway = 2.5 if peak else 4
-    elif priority == "Energy Saving":
-        deploy = int(trains * 0.6)
-        headway = 6 if not peak else 4.5
-    else: 
-        deploy = int(trains * 0.75)
-        headway = 3.5 if peak else 5
+    # Discretize demand
+    if predicted_demand < 2000:
+        demand_level = 0
+    elif predicted_demand < 5000:
+        demand_level = 1
+    else:
+        demand_level = 2
 
-    deploy = max(2, deploy)
+    state = (demand_level, peak, available_trains)
+
+    # Allowed actions
+    actions = list(range(2, available_trains + 1))
+
+    # Select best action from Q-table
+    q_values = [q_table.get((state, a), 0) for a in actions]
+    deploy = actions[np.argmax(q_values)]
+
+    # Estimate headway (simple operational model)
+    headway = round(max(2.0, 12 - deploy), 1)
 
     expected_wait = round(headway / 2, 1)
 
-    overcrowding_risk = "Low"
-    if peak and deploy < trains * 0.7:
-        overcrowding_risk = "High"
+    # Overcrowding risk
+    if peak and demand_level == 2 and deploy < available_trains * 0.7:
+        risk = "High"
     elif peak:
-        overcrowding_risk = "Medium"
+        risk = "Medium"
+    else:
+        risk = "Low"
 
-    return deploy, headway, expected_wait, overcrowding_risk
+    return deploy, headway, expected_wait, risk
 
+# -------------------------------
+# Output Panel
+# -------------------------------
 with right:
     st.subheader("📊 AI Output Preview")
 
     if generate:
-        deploy, headway, wait_time, risk = ai_train_planner(
-            available_trains,
-            optimization_priority,
-            peak_mode
+
+        # Simulated demand (replace with ML model later)
+        predicted_demand = np.random.randint(1500, 6500)
+
+        deploy, headway, wait_time, risk = rl_train_planner(
+            predicted_demand,
+            peak_mode,
+            available_trains
         )
 
         with st.container(border=True):
@@ -79,20 +110,9 @@ with right:
             col1, col2 = st.columns(2)
             col3, col4 = st.columns(2)
 
-            col1.metric(
-                "🚆 Trains to Deploy",
-                deploy
-            )
-
-            col2.metric(
-                "⏱ Headway (min)",
-                f"{headway}"
-            )
-
-            col3.metric(
-                "⌛ Expected Waiting Time",
-                f"{wait_time} min"
-            )
+            col1.metric("🚆 Trains to Deploy", deploy)
+            col2.metric("⏱ Headway (min)", f"{headway}")
+            col3.metric("⌛ Expected Waiting Time", f"{wait_time} min")
 
             if risk == "Low":
                 col4.success("🟢 Overcrowding Risk: Low")
@@ -106,12 +126,18 @@ with right:
             st.info(
                 f"""
                 **AI Insight:**  
-                Based on **{optimization_priority.lower()}** priority and
-                {'peak-hour conditions' if peak_mode else 'off-peak conditions'},
-                the system recommends deploying **{deploy} trains**
-                with an optimized **{headway}-minute headway**.
+                A reinforcement learning agent evaluated multiple deployment actions
+                and selected **{deploy} trains** to balance passenger waiting time,
+                operational efficiency, and congestion risk under
+                {'peak-hour' if peak_mode else 'off-peak'} conditions.
                 """
             )
+
+            if not rl_available:
+                st.warning(
+                    "⚠️ RL model not trained yet. "
+                    "Using default Q-values. Train RL agent for optimal performance."
+                )
 
     else:
         st.info("Adjust inputs and click **Generate AI Plan** to view recommendations")
