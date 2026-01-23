@@ -7,7 +7,7 @@ import os
 import requests
 import google.generativeai as genai
 
-genai.configure(api_key="AIzaSyDg9zY1gnRhrMjRYDBdldzYAuWJd8jok4A")
+genai.configure(api_key="...")
 llm = genai.GenerativeModel("gemini-2.5-flash")
 
 model = joblib.load("./model/demand_forecast_model.pkl")
@@ -29,7 +29,6 @@ STATIONS = [
     "Muttom", "Kalamassery", "CUSAT", "Edappally",
     "Kaloor", "MG Road", "Maharaja’s", "Ernakulam South"
 ]
-
 def get_weather_data(city="Kochi"):
     api_key = os.getenv("WEATHER_API_KEY")
     url = f"http://api.weatherapi.com/v1/current.json?key={api_key}&q={city}&aqi=no"
@@ -79,9 +78,8 @@ Context:
 - Weather: {weather['condition']}, Rain {weather['rain_mm']} mm, {weather['temp']}°C
 - Peak hour: {"Yes" if is_peak else "No"}
 
-Instructions:
-- Explain how weather affected passenger movement
-- Mention comfort and waiting time trade-off
+Rules:
+- Simple professional language
 - Max 3 sentences
 - Do not mention AI or algorithms
 """
@@ -103,6 +101,8 @@ is_peak = 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0
 
 predicted_demand = 0
 recommended_trains = 0
+weather = {"temp": 0, "rain_mm": 0, "condition": "-"}
+weather_factor = 1.0
 
 if run_ai:
     input_df = pd.DataFrame([{
@@ -159,11 +159,11 @@ with center:
 **Predicted Demand:** {predicted_demand} passengers  
 **Direction:** {"Aluva → Ernakulam" if direction_id == 0 else "Ernakulam → Aluva"}
 
-### 🌦️ Weather Impact
+### 🌦️ Weather Impact on Demand
 - **Condition:** {weather['condition']}
 - **Rainfall:** {weather['rain_mm']} mm
 - **Temperature:** {weather['temp']} °C
-- **Demand Adjustment:** {round(weather_factor, 2)}×
+- **Demand Multiplier:** {round(weather_factor, 2)}×
 
 ---
 """)
@@ -179,17 +179,20 @@ with center:
 
 st.subheader("📈 Passenger Demand Trend")
 
-hours = list(range(24))
-hist = np.random.randint(2000, 9000, 24)
-pred = hist.copy()
-pred[hour] = predicted_demand
+history_hours = list(range(24))
+historical = np.random.randint(2000, 9000, size=24)
+predicted = historical.copy()
+predicted[hour] = predicted_demand
 
 fig, ax = plt.subplots(figsize=(10, 4))
-ax.plot(hours, hist, label="Historical")
-ax.plot(hours, pred, "--", label="Weather-Adjusted")
-ax.axvline(hour, linestyle=":")
+ax.plot(history_hours, historical, label="Historical Demand")
+ax.plot(history_hours, predicted, label="AI Predicted", linestyle="--")
+ax.axvline(hour, linestyle=":", label="Selected Hour")
+ax.set_xlabel("Hour")
+ax.set_ylabel("Passengers")
 ax.legend()
 ax.grid(alpha=0.3)
+
 st.pyplot(fig)
 
 st.caption("🚀 Weather-Driven Smart Metro Operations")
