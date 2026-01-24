@@ -55,6 +55,13 @@ app.include_router(
     tags=["Demand Forecasting"]
 )
 
+# Explicitly mapping line features from demand_router to /api/line
+app.include_router(
+    demand_router,
+    prefix="/api", # This will catch /api/line/status since it's defined as /line/status in the router
+    tags=["Line Operations"]
+)
+
 app.include_router(
     induction_router,
     prefix="/api/induction",
