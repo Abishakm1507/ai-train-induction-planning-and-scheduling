@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KMRL AI Operations Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
+        :root {
+            --bg-primary: #f8f9fb;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+            --primary-accent: #2563eb;
+            --primary-accent-hover: #1d4ed8;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --status-ok-bg: #f0fdf4;
+            --status-ok-border: #86efac;
+            --status-warning-bg: #fffbeb;
+            --status-warning-border: #fde68a;
+            --status-error-bg: #fef2f2;
+            --status-error-border: #fecaca;
+            --status-info-bg: #eff6ff;
+            --status-info-border: #bfdbfe;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,90 +32,91 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
+            line-height: 1.5;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            background: #ffffff;
+            color: var(--text-primary);
+            padding: 24px;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
         }
 
         .header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 4px;
         }
 
         .header p {
-            opacity: 0.9;
-            font-size: 0.95em;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
         }
 
         .nav-tabs {
             display: flex;
-            background: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
         }
 
         .nav-tab {
-            flex: 1;
-            padding: 15px 20px;
-            background: #f8f9fa;
+            padding: 16px 24px;
+            background: transparent;
             border: none;
+            border-bottom: 2px solid transparent;
             cursor: pointer;
-            font-size: 1em;
+            font-size: 0.875rem;
             font-weight: 500;
-            transition: all 0.3s;
-            border-right: 1px solid #dee2e6;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            margin-right: 8px;
         }
 
         .nav-tab:hover {
-            background: #e9ecef;
+            color: var(--text-primary);
+            background: #f3f4f6;
         }
 
         .nav-tab.active {
-            background: white;
-            color: #667eea;
-            border-bottom: 2px solid #667eea;
-            margin-bottom: -2px;
+            color: var(--primary-accent);
+            border-bottom-color: var(--primary-accent);
+            font-weight: 600;
         }
 
         .tab-content {
             display: none;
-            padding: 30px;
-            animation: fadeIn 0.3s;
+            padding: 24px;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
+            gap: 16px;
+            margin-bottom: 24px;
             padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
         }
 
         .control-group {
@@ -105,93 +125,97 @@
         }
 
         .control-group label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #495057;
-            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
         }
 
         .control-group input,
         .control-group select {
-            padding: 10px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.875rem;
+            background: #ffffff;
+            color: var(--text-primary);
+            transition: border-color 0.2s;
         }
 
         .control-group input:focus,
         .control-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary-accent);
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
+            background-color: var(--primary-accent);
+            color: #ffffff;
+            padding: 10px 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
             margin-top: auto;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            background-color: var(--primary-accent-hover);
         }
 
         .btn:active {
-            transform: translateY(0);
+            background-color: #1e40af;
         }
 
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .card {
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             padding: 20px;
-            transition: box-shadow 0.3s;
-        }
-
-        .card:hover {
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
 
         .card h3 {
-            color: #495057;
-            margin-bottom: 15px;
-            font-size: 1.1em;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .metric {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 10px;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 8px;
         }
 
         .metric-label {
-            font-weight: 600;
-            color: #6c757d;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
         }
 
         .metric-value {
-            font-size: 1.5em;
-            font-weight: 700;
-            color: #667eea;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary-accent);
         }
 
         .station-list {
@@ -200,61 +224,117 @@
         }
 
         .station-item {
-            padding: 12px;
-            margin-bottom: 8px;
-            background: #f8f9fa;
-            border-radius: 8px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: background 0.3s;
+            justify-content: space-between;
+            padding: 12px 0;
+            gap: 12px;
+            font-size: 14px;
         }
 
-        .station-item:hover {
-            background: #e9ecef;
+        .station-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            min-width: 120px;
+        }
+
+        .station-spacer {
+            flex-grow: 1;
+            border-bottom: 1px dotted #d1d5db;
+            margin-bottom: 4px;
+        }
+
+        .station-metrics {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 200px;
+            justify-content: flex-end;
+        }
+
+        .passenger-count {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-label {
+            font-weight: 600;
+            width: 80px;
+            font-size: 13px;
         }
 
         .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: var(--status-info-bg);
+            border: 1px solid var(--status-info-border);
+            padding: 16px;
+            border-radius: 4px;
+            margin: 16px 0;
+            color: #1e40af;
+            font-size: 0.875rem;
         }
 
         .warning-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: var(--status-warning-bg);
+            border: 1px solid var(--status-warning-border);
+            padding: 16px;
+            border-radius: 4px;
+            margin: 16px 0;
+            color: #854d0e;
+            font-size: 0.875rem;
         }
 
         .success-box {
-            background: #d4edda;
-            border-left: 4px solid #28a745;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: var(--status-ok-bg);
+            border: 1px solid var(--status-ok-border);
+            padding: 16px;
+            border-radius: 4px;
+            margin: 16px 0;
+            color: #166534;
+            font-size: 0.875rem;
         }
 
         .error-box {
-            background: #f8d7da;
-            border-left: 4px solid #dc3545;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: var(--status-error-bg);
+            border: 1px solid var(--status-error-border);
+            padding: 16px;
+            border-radius: 4px;
+            margin: 16px 0;
+            color: #991b1b;
+            font-size: 0.875rem;
         }
 
         .chart-container {
             position: relative;
             height: 300px;
-            margin: 20px 0;
+            margin: 16px 0;
         }
 
         .heatmap-container {
             overflow-x: auto;
             margin: 20px 0;
+            position: relative;
+            background: #ffffff;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .heatmap-wrapper {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            padding: 24px;
+        }
+
+        .heatmap-main {
+            flex-grow: 1;
         }
 
         .heatmap {
@@ -265,43 +345,94 @@
 
         .heatmap-row {
             display: grid;
-            grid-template-columns: 150px repeat(24, 1fr);
+            grid-template-columns: 160px repeat(var(--hours-count, 17), 1fr);
             gap: 2px;
+            align-items: center;
         }
 
         .heatmap-cell {
-            padding: 8px;
-            text-align: center;
-            font-size: 0.8em;
-            border-radius: 4px;
-            font-weight: 600;
-            transition: opacity 0.2s ease;
+            aspect-ratio: 2/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            border-radius: 0;
+            font-weight: 500;
             cursor: pointer;
+            color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(229, 231, 235, 0.5);
         }
 
         .heatmap-cell:hover {
-            opacity: 0.7;
+            outline: 2px solid var(--text-primary);
+            z-index: 10;
         }
 
-        .heatmap-header {
-            background: #495057;
-            color: white;
-            font-weight: 700;
+        .heatmap-header-row {
+            margin-bottom: 8px;
         }
 
-        .heatmap-label {
-            background: #6c757d;
-            color: white;
+        .heatmap-time-label {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding-bottom: 8px;
+        }
+
+        .heatmap-station-label {
+            text-align: right;
+            padding-right: 16px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .heatmap-legend {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            padding-left: 10px;
+            gap: 8px;
+            padding-left: 20px;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .legend-bar {
+            width: 12px;
+            height: 240px;
+            background: linear-gradient(to top, #fff9c4, #fff176, #ffd54f, #ffb74d, #ff8a65, #f44336, #d32f2f, #b71c1c);
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .legend-axis {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 240px;
+            font-size: 0.6875rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding-left: 6px;
+        }
+
+        .legend-title {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 50px;
-            height: 24px;
+            width: 44px;
+            height: 22px;
         }
 
         .toggle-switch input {
@@ -317,32 +448,33 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
+            background-color: #d1d5db;
+            transition: .2s;
+            border-radius: 22px;
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px;
-            width: 18px;
+            height: 16px;
+            width: 16px;
             left: 3px;
             bottom: 3px;
             background-color: white;
-            transition: .4s;
+            transition: .2s;
             border-radius: 50%;
         }
 
-        input:checked + .slider {
-            background-color: #667eea;
+        input:checked+.slider {
+            background-color: var(--primary-accent);
         }
 
-        input:checked + .slider:before {
-            transform: translateX(26px);
+        input:checked+.slider:before {
+            transform: translateX(22px);
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -374,7 +506,8 @@
                 </div>
                 <div class="control-group">
                     <label>Current Trains / Hour</label>
-                    <input type="range" id="trainsPerHour" min="1" max="10" value="5" oninput="updateTrainsPerHourDisplay(this.value)">
+                    <input type="range" id="trainsPerHour" min="1" max="10" value="5"
+                        oninput="updateTrainsPerHourDisplay(this.value)">
                     <span id="trainsDisplay">5</span>
                 </div>
                 <div class="control-group">
@@ -449,13 +582,6 @@
                     <input type="number" id="timeEnd" min="0" max="23" value="22">
                 </div>
                 <div class="control-group">
-                    <label>Day Type</label>
-                    <select id="analyticsDayType">
-                        <option value="weekday">Weekday</option>
-                        <option value="weekend">Weekend</option>
-                    </select>
-                </div>
-                <div class="control-group">
                     <label>Compare Previous Week</label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="comparePrev">
@@ -465,13 +591,14 @@
                 <div class="control-group">
                     <button class="btn" onclick="runDemandAnalytics()">Run</button>
                 </div>
-                
+
             </div>
 
             <div class="card">
                 <h3>🔥 Station-wise Passenger Demand Heatmap</h3>
                 <div class="heatmap-container" id="heatmapContainer"></div>
-                <p style="color: #6c757d; font-size: 0.9em; margin-top: 10px;">Darker colors indicate higher passenger congestion</p>
+                <p style="color: #6c757d; font-size: 0.9em; margin-top: 10px;">Darker colors indicate higher passenger
+                    congestion</p>
             </div>
 
             <div class="card">
@@ -489,7 +616,8 @@
                     <h3>⚙️ Planning Inputs</h3>
                     <div class="control-group" style="margin-bottom: 15px;">
                         <label>Available Trains</label>
-                        <input type="range" id="availableTrains" min="2" max="20" value="10" oninput="updateTrainsDisplay(this.value)">
+                        <input type="range" id="availableTrains" min="2" max="20" value="10"
+                            oninput="updateTrainsDisplay(this.value)">
                         <span id="availableTrainsDisplay">10</span>
                     </div>
                     <div class="control-group" style="margin-bottom: 15px;">
@@ -503,9 +631,10 @@
                 </div>
 
                 <div class="card" style="grid-column: span 2;">
-                    
+
                     <div id="planningOutput">
-                        <div class="info-box">Adjust inputs and click <strong>Generate AI Plan</strong> to view recommendations</div>
+                        <div class="info-box">Adjust inputs and click <strong>Generate AI Plan</strong> to view
+                            recommendations</div>
                     </div>
                 </div>
             </div>
@@ -522,12 +651,14 @@
                     </div>
                     <div class="control-group" style="margin-bottom: 15px;">
                         <label>Passenger Demand Increase (%)</label>
-                        <input type="range" id="demandIncrease" min="0" max="100" value="20" oninput="updateDemandDisplay(this.value)">
+                        <input type="range" id="demandIncrease" min="0" max="100" value="20"
+                            oninput="updateDemandDisplay(this.value)">
                         <span id="demandIncreaseDisplay">20%</span>
                     </div>
                     <div class="control-group" style="margin-bottom: 15px;">
                         <label>Trains Unavailable</label>
-                        <input type="range" id="unavailableTrains" min="0" max="10" value="2" oninput="updateUnavailableDisplay(this.value)">
+                        <input type="range" id="unavailableTrains" min="0" max="10" value="2"
+                            oninput="updateUnavailableDisplay(this.value)">
                         <span id="unavailableDisplay">2</span>
                     </div>
                     <div class="control-group" style="margin-bottom: 15px;">
@@ -550,164 +681,177 @@
         </div>
     </div>
     <script>
-    const MIN_TRAINS = 2;
-    const MAX_TRAINS = 20;
-    const API_BASE = "http://localhost:8001/api";
-    const TRAIN_CAPACITY = 400; // Passengers per train
+        const MIN_TRAINS = 2;
+        const MAX_TRAINS = 20;
+        const API_BASE = "http://127.0.0.1:8000/api";
+        const TRAIN_CAPACITY = 400; // Passengers per train
 
-    // ========== WEATHER API ==========
-    async function getWeatherData(city = "Kochi") {
-        try {
-            const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=4bbb090bd7be475fabb71537262301&q=${city}&aqi=no`);
-            const d = await res.json();
-            return {
-                temp: d.current.temp_c,
-                rain_mm: d.current.precip_mm,
-                condition: d.current.condition.text
-            };
-        } catch (e) {
-            return { temp: 28, rain_mm: 0, condition: "Clear" };
+        // ========== WEATHER API ==========
+        async function getWeatherData(city = "Kochi") {
+            try {
+                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=4bbb090bd7be475fabb71537262301&q=${city}&aqi=no`);
+                const d = await res.json();
+                return {
+                    temp: d.current.temp_c,
+                    rain_mm: d.current.precip_mm,
+                    condition: d.current.condition.text
+                };
+            } catch (e) {
+                return { temp: 28, rain_mm: 0, condition: "Clear" };
+            }
         }
-    }
 
-    // ========== DEMAND FORECASTING API ==========
-    async function fetchDemandForecast(hour, isWeekend, isPeak, trainsPerHour, directionId) {
-        try {
-            const response = await fetch(`${API_BASE}/demand/predict`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    hour,
-                    is_weekend: isWeekend,
-                    is_peak_hour: isPeak ? 1 : 0,
-                    trains_per_hour: trainsPerHour,
-                    direction_id: directionId
-                })
-            });
-            const data = await response.json();
-            return {
-                estimated_demand: data.predicted_demand || 5000,
-                weather_factor: 1.0
-            };
-        } catch (e) {
-            console.error("Demand API Error:", e);
-            return { estimated_demand: 5000, weather_factor: 1.0 };
+        // ========== DEMAND FORECASTING API ==========
+        async function fetchDemandForecast(hour, isWeekend, isPeak, trainsPerHour, directionId) {
+            try {
+                const response = await fetch(`${API_BASE}/demand/predict`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        hour,
+                        is_weekend: isWeekend,
+                        is_peak_hour: isPeak ? 1 : 0,
+                        trains_per_hour: trainsPerHour,
+                        direction_id: directionId
+                    })
+                });
+                const data = await response.json();
+                return {
+                    estimated_demand: data.predicted_demand || 5000,
+                    weather_factor: 1.0
+                };
+            } catch (e) {
+                console.error("Demand API Error:", e);
+                return { estimated_demand: 5000, weather_factor: 1.0 };
+            }
         }
-    }
 
-    // ========== TRAIN INDUCTION API ==========
-    async function fetchTrainRecommendation(predictedDemand, isPeak) {
-        try {
-            const response = await fetch(`${API_BASE}/induction/recommend`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    predicted_demand: predictedDemand,
-                    is_peak_hour: isPeak ? 1 : 0
-                })
-            });
-            return await response.json();
-        } catch (e) {
-            console.error("Induction API Error:", e);
-            return { recommended_trains: 5, confidence: 78, policy: "error" };
+        // ========== TRAIN INDUCTION API ==========
+        async function fetchTrainRecommendation(predictedDemand, isPeak) {
+            try {
+                const response = await fetch(`${API_BASE}/induction/recommend`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        predicted_demand: predictedDemand,
+                        is_peak_hour: isPeak ? 1 : 0
+                    })
+                });
+                return await response.json();
+            } catch (e) {
+                console.error("Induction API Error:", e);
+                return { recommended_trains: 5, confidence: 78, policy: "error" };
+            }
         }
-    }
 
-    // ========== INDUCTION SYSTEM STATUS ==========
-    async function getInductionSystemStatus() {
-        try {
-            const response = await fetch(`${API_BASE}/induction/status`);
-            return await response.json();
-        } catch (e) {
-            console.error("Status API Error:", e);
-            return { status: "unavailable", rl_model_loaded: false };
+        // ========== INDUCTION SYSTEM STATUS ==========
+        async function getInductionSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/induction/status`);
+                return await response.json();
+            } catch (e) {
+                console.error("Status API Error:", e);
+                return { status: "unavailable", rl_model_loaded: false };
+            }
         }
-    }
 
-    // ========== SURGE DETECTION ==========
-    function detectSurge(predictedDemand, threshold = 7000) {
-        if (predictedDemand >= threshold) {
-            return { surge: true, severity: "High" };
-        } else if (predictedDemand >= threshold * 0.8) {
-            return { surge: true, severity: "Medium" };
-        } else {
-            return { surge: false, severity: "Low" };
+        // ========== SURGE DETECTION ==========
+        function detectSurge(predictedDemand, threshold = 7000) {
+            if (predictedDemand >= threshold) {
+                return { surge: true, severity: "High" };
+            } else if (predictedDemand >= threshold * 0.8) {
+                return { surge: true, severity: "Medium" };
+            } else {
+                return { surge: false, severity: "Low" };
+            }
         }
-    }
 
-    // ========== WEATHER-BASED DEMAND MULTIPLIER ==========
-    function weatherDemandMultiplier(weather) {
-        let factor = 1.0;
-        if (weather.rain_mm > 5) factor += 0.2;
-        if (weather.condition.includes("Heavy")) factor += 0.1;
-        if (weather.temp > 34) factor -= 0.05;
-        return factor;
-    }
+        // ========== WEATHER-BASED DEMAND MULTIPLIER ==========
+        function weatherDemandMultiplier(weather) {
+            let factor = 1.0;
+            if (weather.rain_mm > 5) factor += 0.2;
+            if (weather.condition.includes("Heavy")) factor += 0.1;
+            if (weather.temp > 34) factor -= 0.05;
+            return factor;
+        }
 
-    // ========== DEMAND LEVEL DISCRETIZATION ==========
-    function getDemandLevel(demand) {
-        if (demand < 3000) return 0;
-        if (demand < 6000) return 1;
-        return 2;
-    }
+        // ========== DEMAND LEVEL DISCRETIZATION ==========
+        function getDemandLevel(demand) {
+            if (demand < 3000) return 0;
+            if (demand < 6000) return 1;
+            return 2;
+        }
 
-    // ========== GENERATE EXPLANATION ==========
-    function generateExplanation(demand, trains, weather, isPeak) {
-        return `Based on predicted passenger demand of ${demand}, deploying ${trains} trains is recommended. Weather: ${weather.condition}, ${weather.rain_mm}mm rain, ${weather.temp}°C. Peak hour: ${isPeak ? 'Yes' : 'No'}.`;
-    }
+        // ========== GENERATE EXPLANATION ==========
+        function generateExplanation(demand, trains, weather, isPeak) {
+            return `Based on predicted passenger demand of ${demand}, deploying ${trains} trains is recommended. Weather: ${weather.condition}, ${weather.rain_mm}mm rain, ${weather.temp}°C. Peak hour: ${isPeak ? 'Yes' : 'No'}.`;
+        }
     </script>
 
     <script>
-        
+
         /* ---------------- TAB SWITCH ---------------- */
         function switchTab(index) {
             const tabs = document.querySelectorAll(".nav-tab");
             const contents = document.querySelectorAll(".tab-content");
-        
+
             tabs.forEach((t, i) => {
                 t.classList.toggle("active", i === index);
                 contents[i].classList.toggle("active", i === index);
             });
-        }           
-        
+        }
+
         /* ---------------- METRO LINE STATUS ---------------- */
-        function updateMetroLineStatus() {
+        async function updateMetroLineStatus() {
             const stationList = document.getElementById("stationList");
-            // Hardcoded station names
-            const STATIONS = [
-                "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
-                "Muttom", "Kalamassery", "CUSAT", "Edappally",
-                "Kaloor", "MG Road", "Maharaja’s", "Ernakulam South"
-            ];
-        
-            // Get hour from slider for icon logic
             const hour = parseInt(document.getElementById("hour").value);
-        
-            // Generate random congestion for demo
-            stationList.innerHTML = STATIONS.map((s, i) => {
-                const congestion = Math.random(); // Replace with real logic if needed
-                const color = congestion < 0.5 ? "🟢" : (congestion < 0.8 ? "🟡" : "🔴");
-                const icon = i === hour % STATIONS.length ? "🚆" : "➖";
-                return `
-                    <div class="station-item">
-                        <span>${color} <strong>${s}</strong> ${icon}</span>
-                    </div>
-                `;
-            }).join('');
+            const dayType = document.getElementById("dayType").value;
+
+            try {
+                // Fetch real station status from AI backend
+                const res = await fetch(`${API_BASE}/line/status?hour=${hour}&day_type=${dayType}`);
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                stationList.innerHTML = data.map((item, i) => {
+                    const statusColor = item.status === "Normal" ? "#4ade80" : (item.status === "Moderate" ? "#facc15" : "#f87171");
+                    const isTrainHere = i === hour % data.length ? "🚆" : "";
+                    return `
+                        <div class="station-item">
+                            <span class="station-name">${item.station}</span>
+                            <div class="station-spacer"></div>
+                            <div class="station-metrics">
+                                <span class="passenger-count">${item.passengers} passengers</span>
+                                <span class="status-dot" style="background-color: ${statusColor};"></span>
+                                <span class="status-label">${item.status}</span>
+                                <span class="train-icon">${isTrainHere}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("Line Status UI Error:", e);
+                stationList.innerHTML = `<div class="error-box">Status unavailable</div>`;
+            }
         }
 
         // Call Metro Line Status on page load
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
+            const initialHour = document.getElementById("hour").value;
+            const initialDemand = 5000; // Placeholder for initial chart call, updateChart will fetch its own data
+
             updateMetroLineStatus();
+            updateChart(initialHour, initialDemand);
 
             // Initialize display values for sliders
-            updateHourDisplay(document.getElementById("hour").value);
+            updateHourDisplay(initialHour);
             updateTrainsPerHourDisplay(document.getElementById("trainsPerHour").value);
             updateTrainsDisplay(document.getElementById("availableTrains").value);
             updateDemandDisplay(document.getElementById("demandIncrease").value);
             updateUnavailableDisplay(document.getElementById("unavailableTrains").value);
         });
-        
+
         /* ---------------- SLIDER HELPERS ---------------- */
         function updateHourDisplay(val) {
             document.getElementById("hourDisplay").innerText = `${val}:00`;
@@ -717,19 +861,19 @@
         function updateTrainsPerHourDisplay(val) {
             document.getElementById("trainsDisplay").innerText = val;
         }
-        
+
         function updateTrainsDisplay(val) {
             document.getElementById("availableTrainsDisplay").innerText = val;
         }
-        
+
         function updateDemandDisplay(val) {
             document.getElementById("demandIncreaseDisplay").innerText = `${val}%`;
         }
-        
+
         function updateUnavailableDisplay(val) {
             document.getElementById("unavailableDisplay").innerText = val;
         }
-        
+
         /* ---------------- MAIN AI FLOW (WITH BACKEND INTEGRATION) ---------------- */
         async function runAI() {
             const hour = parseInt(document.getElementById("hour").value);
@@ -803,229 +947,201 @@
                 `;
             }
         }
-        
+
         /* ---------------- KPI UPDATE (WITH BACKEND DATA) ---------------- */
         function updateKPIs(demand, trains) {
             const metrics = document.querySelectorAll(".metric-value");
-            
+
             // KPI calculations based on Streamlit logic
             const waitingTime = Math.max(2, 12 - trains);
             const loadPercentage = Math.min(100, Math.round((demand / (trains * TRAIN_CAPACITY)) * 100));
             const energyConsumption = Math.max(60, 100 - trains * 4);
             const comfortLevel = Math.max(50, 100 - loadPercentage);
-            
+
             metrics[0].innerText = `${waitingTime} min`;
             metrics[1].innerText = `${loadPercentage}%`;
             metrics[2].innerText = `${energyConsumption}%`;
             metrics[3].innerText = `${comfortLevel}%`;
         }
-        
-        /* ---------------- CHART (WITH TIME SERIES) ---------------- */
+
+        /* ---------------- DEMAND CHART (TAB 1) ---------------- */
         let demandChart;
-        
-        function updateChart(value, currentHour) {
+
+        async function updateChart(hour, value) {
             const ctx = document.getElementById("demandChart").getContext("2d");
-        
-            if (demandChart) demandChart.destroy();
-        
-            // Generate next 5 hours of projected demand
-            const labels = [];
-            const data = [];
-            for (let i = 0; i < 5; i++) {
-                const hour = (currentHour + i) % 24;
-                labels.push(`${hour}:00`);
-                // Simulate demand based on hour (peak hours 8-10, 17-20)
-                const isPeakHour = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
-                const variance = isPeakHour ? 1.2 : (hour >= 6 && hour <= 22 ? 1.0 : 0.3);
-                data.push(value * variance * (0.9 + i * 0.05));
+            const dayType = document.getElementById("dayType").value;
+
+            if (demandChart) {
+                demandChart.destroy();
             }
-        
-            demandChart = new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Predicted Passenger Demand",
-                        data: data,
-                        borderColor: "#667eea",
-                        backgroundColor: "rgba(102, 126, 234, 0.1)",
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { 
-                            display: true,
-                            labels: { color: "#495057", font: { size: 12 } }
-                        } 
+
+            try {
+                // Fetch 12-hour trend from AI backend
+                const res = await fetch(`${API_BASE}/trend?start_hour=${hour}&day_type=${dayType}`);
+                const trendData = await res.json();
+
+                if (trendData.error) throw new Error(trendData.error);
+
+                demandChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: trendData.hours,
+                        datasets: [{
+                            label: "Predicted Passenger Demand",
+                            data: trendData.demand,
+                            borderColor: "#2563eb",
+                            backgroundColor: "rgba(37, 99, 235, 0.1)",
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 3
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: "#6c757d" },
-                            grid: { color: "rgba(0,0,0,0.05)" }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: "#4b5563", font: { size: 12, weight: '500' } }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1f2937',
+                                padding: 12
+                            }
                         },
-                        x: {
-                            ticks: { color: "#6c757d" },
-                            grid: { color: "rgba(0,0,0,0.05)" }
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: "#6b7280" },
+                                grid: { color: "#f3f4f6" },
+                                title: { display: true, text: 'Passengers' }
+                            },
+                            x: {
+                                ticks: { color: "#6b7280" },
+                                grid: { color: "#f3f4f6" }
+                            }
                         }
                     }
-                }
-            });
-        }
-        
-        /* Fetch all demand data once (prevents duplicate API calls) */
-        async function fetchAllDemandData(timeStart, timeEnd, dayType) {
-            const isWeekend = dayType === "weekend" ? 1 : 0;
-            const predictedByHour = {};
-
-            for (let hour = timeStart; hour <= timeEnd; hour++) {
-                const isPeak = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20) ? 1 : 0;
-                const result = await fetchDemandForecast(hour, isWeekend, isPeak, 5, 0);
-                predictedByHour[hour] = Math.round(result.estimated_demand || 5000);
+                });
+            } catch (e) {
+                console.error("Trend Chart UI Error:", e);
             }
-
-            return predictedByHour;
         }
 
         /* ---------------- DEMAND ANALYTICS (WITH API) - OPTIMIZED TO REDUCE API CALLS ---------------- */
         async function runDemandAnalytics() {
-            const dayType = document.getElementById("analyticsDayType").value;
+            const dateVal = document.getElementById("analyticsDate").value;
             const timeStart = parseInt(document.getElementById("timeStart").value);
             const timeEnd = parseInt(document.getElementById("timeEnd").value);
-            const isWeekend = dayType === "weekend" ? 1 : 0;
 
-            document.getElementById("heatmapContainer").innerHTML = `<div class="info-box">⏳ Loading demand analytics from backend API (fetching data once)...</div>`;
+            // 🛠️ Automatic Day Type Detection
+            if (!dateVal) {
+                alert("Please select a date first.");
+                return;
+            }
+            const date = new Date(dateVal);
+            const day = date.getDay(); // 0 is Sunday, 6 is Saturday
+            const dayType = (day === 0 || day === 6) ? "weekend" : "weekday";
+
+            const heatmapContainer = document.getElementById("heatmapContainer");
+            heatmapContainer.innerHTML = `<div class="info-box">⏳ Fetching AI predictions for <strong>${dayType}</strong> (${dateVal})...</div>`;
 
             try {
-                const stations = [
-                    "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
-                    "Muttom", "Kalamassery", "CUSAT", "Edappally",
-                    "Kaloor", "MG Road", "Maharaja's", "Ernakulam South"
-                ];
+                // Call the new backend endpoint
+                const response = await fetch(`${API_BASE}/demand/heatmap?day_type=${dayType}&start_hour=${timeStart}&end_hour=${timeEnd}`);
+                const data = await response.json();
 
-                // ✅ FETCH DATA ONCE - reduces ~200 API calls to just ~17 calls
-                const predictedByHour = await fetchAllDemandData(timeStart, timeEnd, dayType);
+                if (data.error) throw new Error(data.error);
 
-                // Build heatmap data using cached predictions
-                const heatmapData = {};
-                const hourLabels = [];
+                const stations = data.stations;
+                const hours = data.hours;
+                const values = data.values; // 2D array [station][hour]
 
-                for (let hour = timeStart; hour <= timeEnd; hour++) {
-                    hourLabels.push(hour);
-                }
+                // Set CSS variable for column count
+                heatmapContainer.style.setProperty('--hours-count', hours.length);
 
-                stations.forEach((station, stationIdx) => {
-                    heatmapData[station] = [];
-                    
-                    for (let hour of hourLabels) {
-                        let stationDemand = predictedByHour[hour];
-                        
-                        // Add variation based on station proximity to major hubs
-                        if (stationIdx === 9 || stationIdx === 8) { // Central stations
-                            stationDemand *= 1.3;
-                        }
-                        if (stationIdx === 0 || stationIdx === 11) { // Terminal stations
-                            stationDemand *= 0.7;
-                        }
-                        
-                        heatmapData[station].push({
-                            hour: hour,
-                            demand: Math.round(stationDemand)
-                        });
-                    }
-                });
-
-                // Generate heatmap HTML
-                let heatmapHTML = `
-                    <div class="heatmap">
-                        <div class="heatmap-row">
-                            <div class="heatmap-cell heatmap-header">Station / Hour</div>
-                            ${hourLabels.map(h => `<div class="heatmap-cell heatmap-header">${h}:00</div>`).join('')}
-                        </div>
+                let html = `
+                    <div class="heatmap-wrapper">
+                        <div class="heatmap-main">
+                            <div class="heatmap">
+                                <!-- Time Labels Row -->
+                                <div class="heatmap-row heatmap-header-row">
+                                    <div></div> <!-- Corner spacer -->
+                                    ${hours.map(h => `<div class="heatmap-time-label">${h}</div>`).join('')}
+                                </div>
                 `;
 
-                stations.forEach(station => {
-                    heatmapHTML += `<div class="heatmap-row">
-                        <div class="heatmap-cell heatmap-label">${station}</div>`;
-                    
-                    heatmapData[station].forEach(d => {
-                        const intensity = Math.min(100, (d.demand / 7000) * 100);
-                        const color = getHeatmapColor(intensity);
-                        heatmapHTML += `<div class="heatmap-cell" style="background-color: ${color};"></div>`;
+                stations.forEach((station, sIdx) => {
+                    html += `
+                        <div class="heatmap-row">
+                            <div class="heatmap-station-label">${station}</div>
+                    `;
+
+                    hours.forEach((hour, hIdx) => {
+                        const demand = values[sIdx][hIdx];
+                        const color = getHeatmapColor(demand);
+                        html += `<div class="heatmap-cell" style="background-color: ${color};" title="${station} @ ${hour}:00 - ${demand} passengers"></div>`;
                     });
-                    
-                    heatmapHTML += `</div>`;
+
+                    html += `</div>`;
                 });
 
-                heatmapHTML += `</div>`;
-                
-                // Add legend
-                heatmapHTML += `
-                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <h4>📊 Demand Intensity Legend</h4>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="width: 20px; height: 20px; background: #d4edda; border-radius: 3px; border: 1px solid #ddd;"></div>
-                                <span style="font-size: 0.85em;">Very Low</span>
+                html += `
                             </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="width: 20px; height: 20px; background: #28a745; border-radius: 3px;"></div>
-                                <span style="font-size: 0.85em;">Low</span>
+                            <div style="text-align: center; margin-top: 15px; font-size: 0.9em; color: #6c757d;">Hour of Day</div>
+                        </div>
+                        
+                        <div class="heatmap-legend">
+                            <div class="legend-axis">
+                                <span>3000+</span>
+                                <span>2500</span>
+                                <span>2000</span>
+                                <span>1500</span>
+                                <span>1000</span>
+                                <span>500</span>
+                                <span>0</span>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="width: 20px; height: 20px; background: #ffc107; border-radius: 3px;"></div>
-                                <span style="font-size: 0.85em;">Medium</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="width: 20px; height: 20px; background: #fd7e14; border-radius: 3px;"></div>
-                                <span style="font-size: 0.85em;">High</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="width: 20px; height: 20px; background: #e74c3c; border-radius: 3px;"></div>
-                                <span style="font-size: 0.85em;">Very High</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="width: 20px; height: 20px; background: #8B0000; border-radius: 3px;"></div>
-                                <span style="font-size: 0.85em;">Peak</span>
-                            </div>
+                            <div class="legend-bar"></div>
+                            <div class="legend-title">Passenger Volume</div>
                         </div>
                     </div>
                 `;
-                
-                document.getElementById("heatmapContainer").innerHTML = heatmapHTML;
 
-                // ✅ Generate chart using cached data (NO additional API calls)
-                await generateHistoricalVsPredictedChart(timeStart, timeEnd, dayType, predictedByHour);
+                heatmapContainer.innerHTML = html;
+
+                // Sync the historical vs predicted chart with the aggregate demand per hour
+                const hourlyAggregate = {};
+                hours.forEach((hour, hIdx) => {
+                    let total = 0;
+                    stations.forEach((s, sIdx) => total += values[sIdx][hIdx]);
+                    hourlyAggregate[hour] = total;
+                });
+
+                await generateHistoricalVsPredictedChart(timeStart, timeEnd, dayType, hourlyAggregate);
 
             } catch (error) {
                 console.error("Analytics Error:", error);
-                document.getElementById("heatmapContainer").innerHTML = `
+                heatmapContainer.innerHTML = `
                     <div class="error-box">
-                        <strong>❌ Error:</strong> Failed to load analytics. Backend API may be unavailable at ${API_BASE}/demand/predict
+                        <strong>❌ Error:</strong> Failed to fetch AI heatmap. Backend API may be unreachable.
                     </div>
                 `;
             }
         }
 
-        function getHeatmapColor(intensity) {
-            // Dynamic color gradient: Green → Yellow → Orange → Red → Dark Red/Maroon
-            // Based on intensity percentage (0-100%)
-            
-            if (intensity < 15) return "#d4edda";      // Very light green
-            if (intensity < 25) return "#28a745";      // Light green
-            if (intensity < 35) return "#20c997";      // Green
-            if (intensity < 45) return "#ffeaa7";      // Light yellow
-            if (intensity < 55) return "#ffc107";      // Yellow
-            if (intensity < 65) return "#fd7e14";      // Orange
-            if (intensity < 75) return "#f97316";      // Dark orange
-            if (intensity < 85) return "#e74c3c";      // Red
-            if (intensity < 92) return "#c0392b";      // Dark red
-            return "#8B0000";                          // Maroon/Dark red for peak demand
+
+        function getHeatmapColor(demand) {
+            // Colors: Light Yellow -> Yellow -> Orange -> Red -> dark Red
+            // Model predicts values in range ~500 - ~3500
+            if (demand < 700) return "#fff9c4"; // Very Low
+            if (demand < 1200) return "#fff176"; // Low
+            if (demand < 1700) return "#ffd54f"; // Low-Mid
+            if (demand < 2200) return "#ffb74d"; // Mid
+            if (demand < 2700) return "#ff8a65"; // Mid-High
+            if (demand < 3200) return "#f44336"; // High
+            if (demand < 3700) return "#d32f2f"; // Very High
+            return "#b71c1c"; // Peak
         }
 
         /* ========== FETCH REAL HISTORICAL DEMAND FROM BACKEND ========== */
@@ -1063,9 +1179,9 @@
         /* Generate Historical vs AI-Predicted Demand Chart (uses REAL backend data) */
         async function generateHistoricalVsPredictedChart(timeStart, timeEnd, dayType, cachedPredictedData) {
             const ctx = document.getElementById("historicalVsPredictedChart");
-            
+
             if (!ctx) return; // Chart element not present
-            
+
             if (historicalVsPredictedChart) {
                 historicalVsPredictedChart.destroy();
             }
@@ -1157,7 +1273,7 @@
                                 titleFont: { size: 13, weight: "bold" },
                                 bodyFont: { size: 12 },
                                 callbacks: {
-                                    afterLabel: function(context) {
+                                    afterLabel: function (context) {
                                         if (context.datasetIndex === 0) {
                                             return "Historical average";
                                         } else {
@@ -1202,7 +1318,7 @@
                 console.error("Chart Generation Error:", error);
             }
         }
-        
+
         /* ---------------- TRAIN PLANNING WITH AI (TAB 3) ---------------- */
         async function generatePlan() {
             const availableTrains = parseInt(document.getElementById("availableTrains").value);
@@ -1214,16 +1330,16 @@
                 // Get system status
                 const systemStatus = await getInductionSystemStatus();
                 const rlModelLoaded = systemStatus.rl_model_loaded;
-                
+
                 const planResults = [];
                 let allRecommendations = [];
 
                 // Generate plan for different hours
                 for (let hour = 6; hour <= 22; hour++) {
                     const isPeak = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
-                    
+
                     if (isPeakMode && !isPeak) continue; // Skip non-peak hours if peak mode
-                    
+
                     // Get demand forecast
                     const demandResult = await fetchDemandForecast(hour, 0, isPeak ? 1 : 0, 5, 0);
                     const predictedDemand = demandResult.estimated_demand || 5000;
@@ -1249,19 +1365,19 @@
 
                 // Calculate peak hour recommendation (average of peak hours)
                 const peakResults = planResults.filter(r => (r.hour >= 8 && r.hour <= 10) || (r.hour >= 17 && r.hour <= 20));
-                
+
                 let avgTrains, avgDemand, avgHeadway, avgWaitingTime, avgCrowdingRisk, avgConfidence;
-                
+
                 if (peakResults.length > 0) {
                     avgTrains = Math.round(peakResults.reduce((sum, r) => sum + r.trains, 0) / peakResults.length);
                     avgDemand = Math.round(peakResults.reduce((sum, r) => sum + r.demand, 0) / peakResults.length);
                     avgHeadway = Math.round(peakResults.reduce((sum, r) => sum + r.headway, 0) / peakResults.length);
                     avgWaitingTime = (peakResults.reduce((sum, r) => sum + r.waitingTime, 0) / peakResults.length).toFixed(1);
                     avgConfidence = Math.round(peakResults.reduce((sum, r) => sum + r.confidence, 0) / peakResults.length);
-                    
+
                     // Determine overall crowding risk (take worst case)
                     const riskLevels = { "Low": 1, "Medium": 2, "High": 3 };
-                    avgCrowdingRisk = Object.keys(riskLevels).find(k => 
+                    avgCrowdingRisk = Object.keys(riskLevels).find(k =>
                         riskLevels[k] === Math.ceil(peakResults.reduce((sum, r) => sum + (riskLevels[r.crowdingRisk] || 1), 0) / peakResults.length)
                     ) || "Medium";
                 } else {
@@ -1272,15 +1388,15 @@
                     avgCrowdingRisk = planResults[0]?.crowdingRisk || "Unknown";
                     avgConfidence = planResults[0]?.confidence || 78;
                 }
-                
+
                 // Determine color based on crowding risk
                 let crowdingColor = "#28a745";
                 if (avgCrowdingRisk === "Medium") crowdingColor = "#ffc107";
                 if (avgCrowdingRisk === "High") crowdingColor = "#dc3545";
 
                 // Generate policy indicator
-                const policyLabel = allRecommendations[0]?.policy === "reinforcement-learning" 
-                    ? "Reinforcement Learning 🤖" 
+                const policyLabel = allRecommendations[0]?.policy === "reinforcement-learning"
+                    ? "Reinforcement Learning 🤖"
                     : "Rule-Based Fallback 📋";
 
                 // Generate HTML output with metrics cards
@@ -1385,7 +1501,7 @@
                 `;
             }
         }
-        
+
         /* ---------------- SCENARIO SIMULATOR (TAB 4) ---------------- */
         async function runSimulation() {
             const demandIncrease = parseInt(document.getElementById("demandIncrease").value);
@@ -1422,10 +1538,10 @@
                 let resultHTML = `
                     <div class="${canMeetDemand ? 'success' : 'error'}-box">
                         <strong>${canMeetDemand ? '✓ Scenario Manageable' : '❌ Capacity Exceeded'}</strong><br>
-                        ${canMeetDemand 
-                            ? `Available trains are sufficient to handle the scenario.`
-                            : `Warning: Recommended ${recommendedTrains} trains but only ${availableTrains} available.`
-                        }
+                        ${canMeetDemand
+                        ? `Available trains are sufficient to handle the scenario.`
+                        : `Warning: Recommended ${recommendedTrains} trains but only ${availableTrains} available.`
+                    }
                     </div>
 
                     <div style="margin-top: 20px;">
@@ -1487,9 +1603,10 @@
                 `;
             }
         }
-        </script>
-        
+    </script>
 
-    
+
+
 </body>
+
 </html>

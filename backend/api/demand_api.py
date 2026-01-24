@@ -25,15 +25,15 @@ TRAIN_CAPACITY = 1000
 
 STATIONS = [
     "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
-    "Muttom", "Kalamassery", "CUSAT", "Edappally",
-    "Kaloor", "MG Road", "Maharaja’s", "Ernakulam South"
+    "Muttom", "Kalamassery", "Cochin University", "Edapally",
+    "Kaloor", "MG Road", "Maharajas College", "Ernakulam South"
 ]
 
 # -------------------------------------------------
 # Weather API integration
 # -------------------------------------------------
 def get_weather_data(city: str = "Kochi"):
-    api_key = os.getenv("WEATHER_API_KEY")
+    api_key = "4bbb090bd7be475fabb71537262301"
 
     if not api_key:
         return {"temp": 28, "rain_mm": 0, "condition": "Clear"}
@@ -73,7 +73,7 @@ def weather_demand_multiplier(weather: dict) -> float:
 # -------------------------------------------------
 # LLM (Gemini) configuration
 # -------------------------------------------------
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key="AIzaSyCdVsXfVyuBpOVserT_qnE3tt7CUy3CuX0")
 llm = genai.GenerativeModel("gemini-2.5-flash")
 
 def generate_llm_explanation(demand: int, weather: dict, is_peak: int):
