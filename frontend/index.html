@@ -1144,34 +1144,39 @@
             return "#b71c1c"; // Peak
         }
 
-        /* Generate Historical Demand (simulated pattern-based) */
-        function generateHistoricalDemand(hour, dayType) {
-            // Base pattern: higher during peak hours, lower at night
-            let baseDemand = 2000; // Base late night demand
-
-            if (hour >= 6 && hour < 8) baseDemand = 3500; // Morning commute start
-            if (hour >= 8 && hour < 10) baseDemand = 6500; // Morning peak
-            if (hour >= 10 && hour < 12) baseDemand = 4500; // Mid-morning
-            if (hour >= 12 && hour < 14) baseDemand = 4000; // Lunch hours
-            if (hour >= 14 && hour < 16) baseDemand = 3500; // Afternoon
-            if (hour >= 16 && hour < 17) baseDemand = 4500; // Afternoon commute start
-            if (hour >= 17 && hour < 20) baseDemand = 7000; // Evening peak
-            if (hour >= 20 && hour < 22) baseDemand = 5000; // Late evening
-            if (hour >= 22) baseDemand = 2500; // Night
-
-            // Weekend variation (lower demand)
-            if (dayType === "weekend") {
-                baseDemand *= 0.75;
+        /* ========== FETCH REAL HISTORICAL DEMAND FROM BACKEND ========== */
+        async function getHistoricalDemandFromBackend(dayType, startHour, endHour) {
+            try {
+                const response = await fetch(`${API_BASE}/demand/historical?day_type=${dayType}&start_hour=${startHour}&end_hour=${endHour}`);
+                const data = await response.json();
+                
+                if (data.historical && data.hours) {
+                    return {
+                        hours: data.hours,
+                        historical: data.historical,
+                        success: true
+                    };
+                }
+            } catch (e) {
+                console.error("Historical Demand API Error:", e);
             }
-
-            // Add random variation (±10%)
-            const variation = baseDemand * (0.9 + Math.random() * 0.2);
-            return Math.round(variation);
+            
+            // Fallback if API fails
+            return {
+                hours: [],
+                historical: [],
+                success: false,
+                error: "Failed to fetch historical data"
+            };
         }
+
+        /* Generate Historical Demand (REMOVED - Now using real backend data) */
+        /* This function has been removed. Historical demand is now fetched from backend API */
+        /* See getHistoricalDemandFromBackend() below */
 
         let historicalVsPredictedChart;
 
-        /* Generate Historical vs AI-Predicted Demand Chart (uses cached data) */
+        /* Generate Historical vs AI-Predicted Demand Chart (uses REAL backend data) */
         async function generateHistoricalVsPredictedChart(timeStart, timeEnd, dayType, cachedPredictedData) {
             const ctx = document.getElementById("historicalVsPredictedChart");
 
@@ -1182,19 +1187,30 @@
             }
 
             try {
+                // Fetch REAL historical demand from backend
+                const historicalResult = await getHistoricalDemandFromBackend(dayType, timeStart, timeEnd);
+                
                 const labels = [];
                 const historicalData = [];
                 const predictedData = [];
 
-                // Build chart data using cached predictions (NO additional API calls)
-                for (let hour = timeStart; hour <= timeEnd; hour++) {
-                    labels.push(`${hour}:00`);
-
-                    // Historical demand (simulated based on patterns)
-                    historicalData.push(generateHistoricalDemand(hour, dayType));
-
-                    // Use cached predicted demand
-                    predictedData.push(cachedPredictedData[hour]);
+                // Build chart data using REAL historical data
+                if (historicalResult.success && historicalResult.hours.length > 0) {
+                    // Use backend historical data
+                    for (let i = 0; i < historicalResult.hours.length; i++) {
+                        const hour = historicalResult.hours[i];
+                        labels.push(`${hour}:00`);
+                        historicalData.push(historicalResult.historical[i]);
+                        predictedData.push(cachedPredictedData[hour] || 5000);
+                    }
+                } else {
+                    // Fallback: just use predicted data without historical comparison
+                    console.warn("Historical data unavailable, showing predicted data only");
+                    for (let hour = timeStart; hour <= timeEnd; hour++) {
+                        labels.push(`${hour}:00`);
+                        historicalData.push(null); // No historical data available
+                        predictedData.push(cachedPredictedData[hour] || 5000);
+                    }
                 }
 
                 const chartCtx = ctx.getContext("2d");
@@ -1204,7 +1220,7 @@
                         labels: labels,
                         datasets: [
                             {
-                                label: "📊 Historical Demand (Past Week Average)",
+                                label: "📊 Historical Demand (Real Data)",
                                 data: historicalData,
                                 borderColor: "#6c757d",
                                 backgroundColor: "rgba(108, 117, 125, 0.1)",
