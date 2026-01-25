@@ -4,6 +4,7 @@ import numpy as np
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Dict, List, Optional
+import google.generativeai as genai
 
 # -------------------------------------------------
 # Path configuration
@@ -22,10 +23,17 @@ except Exception:
     rl_ready = False
 
 # -------------------------------------------------
+# Gemini Configuration
+# -------------------------------------------------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCdVsXfVyuBpOVserT_qnE3tt7CUy3CuX0")
+genai.configure(api_key=GEMINI_API_KEY)
+llm = genai.GenerativeModel("gemini-1.5-flash")
+
+# -------------------------------------------------
 # Constants
 # -------------------------------------------------
 MIN_TRAINS = 2
-MAX_TRAINS = 10
+MAX_TRAINS = 20
 
 # -------------------------------------------------
 # Pydantic models
@@ -33,6 +41,7 @@ MAX_TRAINS = 10
 class InductionRequest(BaseModel):
     predicted_demand: int
     is_peak_hour: int
+    available_trains: int = 10
 
 class InductionResponse(BaseModel):
     recommended_trains: int
@@ -125,6 +134,31 @@ def assess_overcrowding_risk(demand_level: int, is_peak: int, trains_deployed: i
         else:
             return "Low"
 
+def generate_llm_explanation(demand: int, trains: int, is_peak: int, policy: str):
+    """
+    Generate natural language explanation using Gemini
+    """
+    prompt = f"""
+Explain the metro operational decision.
+
+Context:
+- Predicted passenger demand: {demand}
+- Trains recommended: {trains}
+- Peak hour: {"Yes" if is_peak else "No"}
+- Policy used: {policy}
+
+Rules:
+- Simple professional language
+- Max 2–3 sentences
+- Do not mention AI or "the model" or specific algorithm names like Q-learning
+- Focus on the balance between service availability and passenger load.
+"""
+    try:
+        response = llm.generate_content(prompt)
+        return response.text.strip()
+    except Exception:
+        return f"Based on the current demand of {demand} passengers, we recommend deploying {trains} trains to maintain optimal headways during {'peak' if is_peak else 'off-peak'} hours."
+
 def generate_explanation(demand_level: int, is_peak: int, trains_deployed: int, 
                         headway: float, policy: str) -> str:
     """
@@ -156,14 +190,31 @@ def recommend_trains(data: InductionRequest):
     Returns detailed recommendation with operational metrics
     """
     demand_level = get_demand_level(data.predicted_demand)
-    state = (demand_level, data.is_peak_hour)
-    actions = list(range(MIN_TRAINS, MAX_TRAINS + 1))
-
+    # The Q-table was trained with numpy types in some fields
+    # State format in Q-table: (demand_level, np.int64(peak), available_trains)
+    # Action format in Q-table: np.int64(action)
+    
+    actions = list(range(MIN_TRAINS, 21))
+    
     if rl_ready:
-        q_values = {action: q_table.get((state, action), 0.0) for action in actions}
-        best_action = actions[int(np.argmax([q_values[a] for a in actions]))]
-        confidence = 92
-        policy = "reinforcement-learning"
+        # Try different type combinations to match the Q-table keys
+        # Based on inspection: ((int, np.int64, int), np.int64)
+        q_values = {}
+        for a in actions:
+            # Construct the exact key used during training
+            key = ((demand_level, np.int64(data.is_peak_hour), data.available_trains), np.int64(a))
+            # Use a very low fallback for negative Q-values
+            q_values[a] = q_table.get(key, -9999.0)
+
+        # If all lookups failed (-9999), use fallback policy
+        if all(v == -9999.0 for v in q_values.values()):
+            best_action = fallback_policy(demand_level, data.is_peak_hour)
+            confidence = 70
+            policy = "rule-based-fallback (no Q-match)"
+        else:
+            best_action = actions[int(np.argmax([q_values[a] for a in actions]))]
+            confidence = 92
+            policy = "reinforcement-learning"
     else:
         best_action = fallback_policy(demand_level, data.is_peak_hour)
         confidence = 78
@@ -174,7 +225,14 @@ def recommend_trains(data: InductionRequest):
     headway = calculate_headway(best_action)
     waiting_time = calculate_waiting_time(headway)
     risk = assess_overcrowding_risk(demand_level, data.is_peak_hour, best_action)
-    explanation = generate_explanation(demand_level, data.is_peak_hour, best_action, headway, policy)
+    
+    # Generate Gemini-powered explanation
+    explanation = generate_llm_explanation(
+        data.predicted_demand, 
+        best_action, 
+        data.is_peak_hour, 
+        policy
+    )
 
     return {
         "recommended_trains": best_action,
@@ -197,14 +255,22 @@ def recommend_trains_detailed(data: InductionRequest):
     Useful for monitoring and understanding RL model decisions
     """
     demand_level = get_demand_level(data.predicted_demand)
-    state = (demand_level, data.is_peak_hour)
-    actions = list(range(MIN_TRAINS, MAX_TRAINS + 1))
+    actions = list(range(MIN_TRAINS, 21))
 
     if rl_ready:
-        q_values = {action: float(q_table.get((state, action), 0.0)) for action in actions}
-        best_action = actions[int(np.argmax([q_values[a] for a in actions]))]
-        confidence = 92
-        policy = "reinforcement-learning"
+        q_values = {}
+        for a in actions:
+            key = ((demand_level, np.int64(data.is_peak_hour), data.available_trains), np.int64(a))
+            q_values[a] = float(q_table.get(key, -9999.0))
+            
+        if all(v == -9999.0 for v in q_values.values()):
+            best_action = fallback_policy(demand_level, data.is_peak_hour)
+            confidence = 70
+            policy = "rule-based-fallback (no Q-match)"
+        else:
+            best_action = actions[int(np.argmax([q_values[a] for a in actions]))]
+            confidence = 92
+            policy = "reinforcement-learning"
     else:
         best_action = fallback_policy(demand_level, data.is_peak_hour)
         confidence = 78
@@ -215,7 +281,14 @@ def recommend_trains_detailed(data: InductionRequest):
     headway = calculate_headway(best_action)
     waiting_time = calculate_waiting_time(headway)
     risk = assess_overcrowding_risk(demand_level, data.is_peak_hour, best_action)
-    explanation = generate_explanation(demand_level, data.is_peak_hour, best_action, headway, policy)
+    
+    # Generate Gemini-powered explanation
+    explanation = generate_llm_explanation(
+        data.predicted_demand, 
+        best_action, 
+        data.is_peak_hour, 
+        policy
+    )
 
     return {
         "recommended_trains": best_action,

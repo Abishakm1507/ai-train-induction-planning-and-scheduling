@@ -135,19 +135,38 @@
 
         .control-group input,
         .control-group select {
-            padding: 8px 12px;
+            padding: 10px 14px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.875rem;
             background: #ffffff;
             color: var(--text-primary);
-            transition: border-color 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .control-group select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234b5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .control-group input:hover,
+        .control-group select:hover {
+            border-color: #d1d5db;
+            background-color: #f9fafb;
         }
 
         .control-group input:focus,
         .control-group select:focus {
             outline: none;
             border-color: var(--primary-accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            background-color: #ffffff;
         }
 
         .btn {
@@ -627,7 +646,7 @@
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <button class="btn" onclick="generatePlan()" style="width: 100%;">🤖 Generate AI Plan</button>
+                    <button class="btn" onclick="generatePlan()" style="width: 100%;">Generate AI Plan</button>
                 </div>
 
                 <div class="card" style="grid-column: span 2;">
@@ -727,20 +746,21 @@
         }
 
         // ========== TRAIN INDUCTION API ==========
-        async function fetchTrainRecommendation(predictedDemand, isPeak) {
+        async function fetchTrainRecommendation(predictedDemand, isPeak, availableTrains = 10) {
             try {
                 const response = await fetch(`${API_BASE}/induction/recommend`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         predicted_demand: predictedDemand,
-                        is_peak_hour: isPeak ? 1 : 0
+                        is_peak_hour: isPeak ? 1 : 0,
+                        available_trains: availableTrains
                     })
                 });
                 return await response.json();
             } catch (e) {
                 console.error("Induction API Error:", e);
-                return { recommended_trains: 5, confidence: 78, policy: "error" };
+                return { recommended_trains: 5, confidence: 78, policy: "error", explanation: "Default recommendation due to API error." };
             }
         }
 
@@ -891,10 +911,11 @@
                 const predictedDemand = demandResult.estimated_demand || 5000;
 
                 // 3️⃣ Call Train Induction API (RL-based)
-                const inductionResult = await fetchTrainRecommendation(predictedDemand, isPeak);
+                const inductionResult = await fetchTrainRecommendation(predictedDemand, isPeak, 10); // Default 10 available
                 const recommendedTrains = inductionResult.recommended_trains;
-                const confidence = inductionResult.confidence;
                 const policy = inductionResult.policy;
+                const confidence = inductionResult.confidence;
+                const explanation = inductionResult.explanation;
 
                 // 4️⃣ Detect surges
                 const surgeStatus = detectSurge(predictedDemand);
@@ -927,6 +948,11 @@
                         
                         <strong>Headway (minutes):</strong> ${Math.round(60 / recommendedTrains)}<br>
                         <strong>Peak Hour:</strong> ${isPeak ? 'Yes' : 'No'}
+                    </div>
+
+                    <div class="info-box" style="margin-top: 15px; border-left: 4px solid var(--primary-accent);">
+                        <strong>🧠 AI Insight:</strong><br>
+                        ${explanation}
                     </div>
                 `;
 
@@ -1325,8 +1351,8 @@
                     const predictedDemand = demandResult.estimated_demand || 5000;
 
                     // Get train recommendation from RL model
-                    const inductionResult = await fetchTrainRecommendation(predictedDemand, isPeak);
-                    const recommendedTrains = Math.min(inductionResult.recommended_trains, availableTrains);
+                    const inductionResult = await fetchTrainRecommendation(predictedDemand, isPeak, availableTrains);
+                    const recommendedTrains = inductionResult.recommended_trains;
 
                     planResults.push({
                         hour: hour,
@@ -1480,6 +1506,10 @@
                     <div class="error-box">Error generating plan. Backend unavailable.</div>
                 `;
             }
+        }
+        function updatePlanningTrainsDisplay() {
+            const availableTrains = document.getElementById("availableTrains").value;
+            document.getElementById("planningAvailableTrainsDisplay").textContent = availableTrains;
         }
 
         /* ---------------- SCENARIO SIMULATOR (TAB 4) ---------------- */
