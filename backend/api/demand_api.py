@@ -19,21 +19,36 @@ model = joblib.load(os.path.join(MODEL_DIR, "demand_forecast_model.pkl"))
 features = joblib.load(os.path.join(MODEL_DIR, "model_features.pkl"))
 
 # -------------------------------------------------
+# Load processed data once at startup
+# -------------------------------------------------
+DATA_PATH = os.path.join(BASE_DIR, "data", "processed", "processed-data.csv")
+try:
+    df_cached = pd.read_csv(DATA_PATH)
+    # Pre-calculate hour to speed up filtering
+    df_cached['hour_val'] = df_cached['arrival_time'].astype(str).str.split(':').str[0].astype(int) % 24
+except Exception as e:
+    print(f"Warning: Could not load processed data: {e}")
+    df_cached = pd.DataFrame()
+
+# -------------------------------------------------
 # Constants
 # -------------------------------------------------
 TRAIN_CAPACITY = 1000
 
 STATIONS = [
-    "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
-    "Muttom", "Kalamassery", "Cochin University", "Edapally",
-    "Kaloor", "MG Road", "Maharajas College", "Ernakulam South"
+    "Aluva", "Pulinchodu", "Companypady", "Ambattukavu", "Muttom", 
+    "Kalamassery", "Pathadipalam", "Cochin University", "Edapally", 
+    "Changampuzha Park", "Palarivattom", "JLN Stadium", "Kaloor", 
+    "Town Hall", "MG Road", "Maharajas College", "Ernakulam South", 
+    "Kadavanthra", "Elamkulam", "Vyttila", "Thykoodam", "Pettah", 
+    "Vadakkekotta", "SN Junction", "Tripunithura"
 ]
 
 # -------------------------------------------------
 # Weather API integration
 # -------------------------------------------------
 def get_weather_data(city: str = "Kochi"):
-    api_key = "4bbb090bd7be475fabb71537262301"
+    api_key = os.getenv("WEATHER_API_KEY", "4bbb090bd7be475fabb71537262301")
 
     if not api_key:
         return {"temp": 28, "rain_mm": 0, "condition": "Clear"}
@@ -73,8 +88,9 @@ def weather_demand_multiplier(weather: dict) -> float:
 # -------------------------------------------------
 # LLM (Gemini) configuration
 # -------------------------------------------------
-genai.configure(api_key="AIzaSyCdVsXfVyuBpOVserT_qnE3tt7CUy3CuX0")
-llm = genai.GenerativeModel("gemini-2.5-flash")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCdVsXfVyuBpOVserT_qnE3tt7CUy3CuX0")
+genai.configure(api_key=GEMINI_API_KEY)
+llm = genai.GenerativeModel("gemini-1.5-flash")
 
 def generate_llm_explanation(demand: int, weather: dict, is_peak: int):
     """
@@ -142,110 +158,6 @@ def predict_passenger_demand(input_data: dict):
 # -------------------------------------------------
 router = APIRouter()
 
-# Load processed data for historical demand
-DATA_DIR = os.path.join(BASE_DIR, "data", "processed")
-PROCESSED_DATA_PATH = os.path.join(DATA_DIR, "processed-data.csv")
-
-def load_historical_demand_data():
-    """Load and cache historical demand data from processed CSV"""
-    try:
-        if not os.path.exists(PROCESSED_DATA_PATH):
-            return None
-        df = pd.read_csv(PROCESSED_DATA_PATH)
-        return df
-    except Exception as e:
-        print(f"Error loading historical data: {e}")
-        return None
-
-# Cache for historical data
-_historical_data_cache = None
-
-def get_historical_demand_by_hour(day_type: str = "weekday", start_hour: int = 6, end_hour: int = 22):
-    """
-    Aggregate real historical demand by hour from processed data
-    
-    Args:
-        day_type: 'weekday' or 'weekend'
-        start_hour: Start hour (0-23)
-        end_hour: End hour (0-23)
-    
-    Returns:
-        Dict with hours, historical demand, and aggregated stats
-    """
-    global _historical_data_cache
-    
-    if _historical_data_cache is None:
-        _historical_data_cache = load_historical_demand_data()
-    
-    if _historical_data_cache is None:
-        # Fallback if data not available
-        return {
-            "hours": list(range(start_hour, end_hour + 1)),
-            "historical": [5000] * (end_hour - start_hour + 1),
-            "error": "Historical data not available"
-        }
-    
-    df = _historical_data_cache.copy()
-    
-    # Filter by day type using day-of-week columns
-    if day_type == "weekday":
-        # Weekday: monday(0) to friday(4)
-        df = df[(df["monday"] == 1) | (df["tuesday"] == 1) | (df["wednesday"] == 1) | 
-                (df["thursday"] == 1) | (df["friday"] == 1)]
-    elif day_type == "weekend":
-        # Weekend: saturday(5) and sunday(6)
-        df = df[(df["saturday"] == 1) | (df["sunday"] == 1)]
-    
-    # Extract hour from arrival_time (format: HH:MM:SS)
-    if "arrival_time" in df.columns:
-        df["hour"] = df["arrival_time"].str.split(":").str[0].astype(int, errors="ignore")
-    else:
-        # Fallback: return default values
-        return {
-            "hours": list(range(start_hour, end_hour + 1)),
-            "historical": [5000] * (end_hour - start_hour + 1),
-            "error": "arrival_time column not found"
-        }
-    
-    # Filter by hour range
-    df = df[(df["hour"] >= start_hour) & (df["hour"] <= end_hour)]
-    
-    # Count arrivals per hour as proxy for demand
-    # More arrivals = more demand
-    historical_by_hour = {}
-    
-    if not df.empty:
-        hourly_count = df.groupby("hour").size()
-        
-        # Normalize counts to reasonable passenger demand range (3000-8000)
-        min_count = hourly_count.min() if len(hourly_count) > 0 else 1
-        max_count = hourly_count.max() if len(hourly_count) > 0 else 100
-        count_range = max_count - min_count if max_count > min_count else 1
-        
-        for hour in range(start_hour, end_hour + 1):
-            if hour in hourly_count.index:
-                count = hourly_count[hour]
-                # Scale to 3000-8000 range
-                normalized = 3000 + ((count - min_count) / count_range * 5000)
-                historical_by_hour[hour] = int(normalized)
-            else:
-                # Linear interpolation for missing hours
-                historical_by_hour[hour] = 5000
-    else:
-        # No data for this filter combination
-        historical_by_hour = {h: 5000 for h in range(start_hour, end_hour + 1)}
-    
-    # Create hourly list
-    hours = list(range(start_hour, end_hour + 1))
-    historical_values = [historical_by_hour.get(h, 5000) for h in hours]
-    
-    return {
-        "hours": hours,
-        "historical": historical_values,
-        "day_type": day_type,
-        "data_points": len(df) if not df.empty else 0
-    }
-
 @router.post("/predict")
 async def predict_demand(payload: dict):
     """
@@ -253,19 +165,212 @@ async def predict_demand(payload: dict):
     """
     return predict_passenger_demand(payload or {})
 
+@router.get("/heatmap")
+async def get_heatmap_data(day_type: str = "weekday", start_hour: int = 6, end_hour: int = 22):
+    """
+    GET /api/demand/heatmap
+    Dynamically generates station-wise demand predictions using the ML model.
+    """
+    try:
+        if df_cached.empty:
+            raise Exception("Processed data not available")
+
+        # Basic Preprocessing
+        is_weekend = 1 if day_type == "weekend" else 0
+        hours_range = list(range(start_hour, end_hour + 1))
+
+        # Calculate service frequency once
+        train_freq = (
+            df_cached.groupby(['stop_name', 'hour_val'])
+            .agg(trains_per_hour=('trip_id', 'nunique'))
+            .reset_index()
+        )
+
+        # 1. Prepare ALL rows for batch prediction
+        rows = []
+        for station in STATIONS:
+            for hour in hours_range:
+                freq_row = train_freq[(train_freq['stop_name'] == station) & (train_freq['hour_val'] == hour)]
+                tph = freq_row['trains_per_hour'].values[0] if not freq_row.empty else 1
+                is_peak = 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0
+                
+                rows.append({
+                    'hour': hour,
+                    'is_weekend': is_weekend,
+                    'is_peak_hour': is_peak,
+                    'trains_per_hour': tph,
+                    'direction_id': 0,
+                    'station': station, # Keep track for mapping later
+                    'hour_idx': hour
+                })
+
+        batch_df = pd.DataFrame(rows)
+        # Ensure only model features are used
+        input_df = batch_df.reindex(columns=features, fill_value=0)
+        
+        # 2. Single batch prediction (VERY FAST)
+        predictions = model.predict(input_df)
+        batch_df['prediction'] = predictions.astype(int)
+
+        # 3. Format into the [station][hour] 2D array the frontend expects
+        heatmap_values = []
+        for station in STATIONS:
+            station_preds = batch_df[batch_df['station'] == station].sort_values('hour_idx')['prediction'].tolist()
+            heatmap_values.append(station_preds)
+
+        return {
+            "stations": STATIONS,
+            "hours": hours_range,
+            "values": heatmap_values
+        }
+
+    except Exception as e:
+        print(f"Heatmap API Error: {str(e)}")
+        return {"error": str(e)}
+
+@router.get("/line/status")
+async def get_line_status(hour: int = 9, day_type: str = "weekday"):
+    """
+    GET /api/demand/line/status
+    Predicts passenger demand per station and determines congestion status.
+    """
+    try:
+        if df_cached.empty:
+            raise Exception("Processed data not available")
+            
+        is_weekend = 1 if day_type == "weekend" else 0
+        is_peak = 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0
+        
+        results = []
+        for station in STATIONS:
+            # Find typical trains per hour for this station and hour
+            station_hour_data = df_cached[(df_cached['stop_name'] == station) & (df_cached['hour_val'] == hour)]
+            tph = station_hour_data['trip_id'].nunique() if not station_hour_data.empty else 5
+            
+            input_df = pd.DataFrame([{
+                'hour': hour,
+                'is_weekend': is_weekend,
+                'is_peak_hour': is_peak,
+                'trains_per_hour': tph,
+                'direction_id': 0
+            }])
+            input_df = input_df.reindex(columns=features, fill_value=0)
+            
+            predicted_demand = int(model.predict(input_df)[0])
+            
+            # Categorize status
+            if predicted_demand < 400:
+                status = "Normal"
+            elif predicted_demand <= 650:
+                status = "Moderate"
+            else:
+                status = "Congested"
+                
+            results.append({
+                "station": station,
+                "passengers": predicted_demand,
+                "status": status
+            })
+            
+        return results
+
+    except Exception as e:
+        print(f"Line Status API Error: {str(e)}")
+        return {"error": str(e)}
+
 @router.get("/historical")
 async def get_historical_demand(day_type: str = "weekday", start_hour: int = 6, end_hour: int = 22):
     """
-    GET /api/demand/historical?day_type=weekday&start_hour=6&end_hour=22
-    
-    Returns real historical passenger demand aggregated by hour from processed data.
-    
-    Response:
-    {
-        "hours": [6, 7, 8, ...],
-        "historical": [4200, 5100, 6900, ...],
-        "day_type": "weekday",
-        "data_points": 1200
-    }
+    GET /api/demand/historical
+    Returns aggregate historical passenger demand per hour.
     """
-    return get_historical_demand_by_hour(day_type, start_hour, end_hour)
+    try:
+        if df_cached.empty:
+            raise Exception("Processed data not available")
+
+        is_weekend = 1 if day_type == "weekend" else 0
+        
+        # Filter by day type
+        df_filtered = df_cached[df_cached['is_weekend'] == is_weekend]
+        
+        # Group by hour and sum passengers, then divide by number of unique trips to get average per hour
+        # Actually, for total aggregate demand we just sum by hour
+        historical_trend = (
+            df_filtered.groupby('hour_val')['passengers']
+            .sum()
+            .reset_index()
+        )
+        
+        # Filter by hour range
+        historical_trend = historical_trend[
+            (historical_trend['hour_val'] >= start_hour) & 
+            (historical_trend['hour_val'] <= end_hour)
+        ]
+        
+        # Sort by hour
+        historical_trend = historical_trend.sort_values('hour_val')
+        
+        return {
+            "hours": historical_trend['hour_val'].tolist(),
+            "historical": historical_trend['passengers'].tolist(),
+            "success": True
+        }
+
+    except Exception as e:
+        print(f"Historical API Error: {str(e)}")
+        return {"error": str(e), "success": False}
+
+@router.get("/trend")
+async def get_demand_trend(start_hour: int = 8, day_type: str = "weekday"):
+    """
+    GET /api/demand/trend
+    Predicts aggregate demand for the next 12 hours.
+    """
+    try:
+        if df_cached.empty:
+            raise Exception("Processed data not available")
+            
+        is_weekend = 1 if day_type == "weekend" else 0
+        trend_hours = [(start_hour + i) % 24 for i in range(12)]
+
+        # Prepare all station/hour combos for batch
+        rows = []
+        for hour in trend_hours:
+            is_peak = 1 if (8 <= hour <= 10 or 17 <= hour <= 20) else 0
+            for station in STATIONS:
+                station_hour_data = df_cached[(df_cached['stop_name'] == station) & (df_cached['hour_val'] == hour)]
+                tph = station_hour_data['trip_id'].nunique() if not station_hour_data.empty else 5
+                
+                rows.append({
+                    'hour': hour,
+                    'is_weekend': is_weekend,
+                    'is_peak_hour': is_peak,
+                    'trains_per_hour': tph,
+                    'direction_id': 0,
+                    'trend_hour_val': hour
+                })
+
+        batch_df = pd.DataFrame(rows)
+        # Ensure only model features are used
+        input_df = batch_df.reindex(columns=features, fill_value=0)
+        
+        # Batch predict
+        batch_df['prediction'] = model.predict(input_df)
+
+        # Aggregate demand by hour
+        hourly_demand = batch_df.groupby('trend_hour_val')['prediction'].sum()
+        
+        hours_labels = []
+        demand_values = []
+        for hour in trend_hours:
+            hours_labels.append(f"{hour:02d}:00")
+            demand_values.append(int(hourly_demand[hour]))
+            
+        return {
+            "hours": hours_labels,
+            "demand": demand_values
+        }
+
+    except Exception as e:
+        print(f"Demand Trend API Error: {str(e)}")
+        return {"error": str(e)}

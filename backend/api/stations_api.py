@@ -4,9 +4,23 @@ from fastapi import APIRouter
 # Stations metadata
 # -------------------------------------------------
 STATIONS = [
-    "Aluva", "Pulinchodu", "Companypady", "Ambattukavu",
-    "Muttom", "Kalamassery", "CUSAT", "Edappally",
-    "Kaloor", "MG Road", "Maharaja's", "Ernakulam South"
+     "Aluva",
+    "Pulinchodu",
+    "Companypady",
+    "Ambattukavu",
+    "Muttom",
+    "Kalamassery",
+    "Pathadipalam",
+    "Cochin University",
+    "Edapally",
+    "Changampuzha Park",
+    "Palarivattom",
+    "JLN Stadium",
+    "Kaloor",
+    "Town Hall",
+    "MG Road",
+    "Maharaja’s College",
+    "Ernakulam South"
 ]
 
 # -------------------------------------------------

@@ -478,15 +478,15 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚆 Kochi Metro – AI Operations Control Dashboard</h1>
+            <h1>Kochi Metro – AI Operations Control Dashboard</h1>
             <p>Weather-Aware Demand Forecasting & Intelligent Train Management</p>
         </div>
 
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="switchTab(0)">🚆 Operations Control</button>
-            <button class="nav-tab" onclick="switchTab(1)">📊 Demand Analytics</button>
-            <button class="nav-tab" onclick="switchTab(2)">🚆 Train Planning</button>
-            <button class="nav-tab" onclick="switchTab(3)">🔮 Scenario Simulator</button>
+            <button class="nav-tab active" onclick="switchTab(0)">Operations Control</button>
+            <button class="nav-tab" onclick="switchTab(1)">Demand Analytics</button>
+            <button class="nav-tab" onclick="switchTab(2)">Train Planning</button>
+            <button class="nav-tab" onclick="switchTab(3)">Scenario Simulator</button>
         </div>
 
         <!-- TAB 1: Operations Control -->
@@ -518,40 +518,40 @@
                     </select>
                 </div>
                 <div class="control-group">
-                    <button class="btn" onclick="runAI()">🔮 Run AI</button>
+                    <button class="btn" onclick="runAI()">Run AI</button>
                 </div>
             </div>
 
             <div class="grid">
                 <div class="card">
-                    <h3>🗺️ Metro Line Status</h3>
+                    <h3>Metro Line Routes</h3>
                     <div class="station-list" id="stationList"></div>
                 </div>
 
                 <div class="card">
-                    <h3>🤖 AI Recommendation</h3>
+                    <h3>AI Recommendation</h3>
                     <div id="aiRecommendation">
                         <div class="info-box">Run AI to generate recommendation</div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>📊 KPIs</h3>
+                    <h3>KPIs</h3>
                     <div id="kpis">
                         <div class="metric">
-                            <span class="metric-label">⏱ Waiting Time</span>
+                            <span class="metric-label">Waiting Time</span>
                             <span class="metric-value">-</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">👥 Load %</span>
+                            <span class="metric-label">Load %</span>
                             <span class="metric-value">-</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">⚡ Energy %</span>
+                            <span class="metric-label">Energy %</span>
                             <span class="metric-value">-</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">🙂 Comfort %</span>
+                            <span class="metric-label">Comfort %</span>
                             <span class="metric-value">-</span>
                         </div>
                     </div>
@@ -559,7 +559,7 @@
             </div>
 
             <div class="card">
-                <h3>📈 Passenger Demand Trend</h3>
+                <h3>Passenger Demand Trend</h3>
                 <div class="chart-container">
                     <canvas id="demandChart"></canvas>
                 </div>
@@ -570,15 +570,15 @@
         <div class="tab-content">
             <div class="controls">
                 <div class="control-group">
-                    <label>📅 Select Date</label>
+                    <label>Select Date</label>
                     <input type="date" id="analyticsDate">
                 </div>
                 <div class="control-group">
-                    <label>⏱ Time Range Start</label>
+                    <label>Time Range Start</label>
                     <input type="number" id="timeStart" min="0" max="23" value="6">
                 </div>
                 <div class="control-group">
-                    <label>⏱ Time Range End</label>
+                    <label>Time Range End</label>
                     <input type="number" id="timeEnd" min="0" max="23" value="22">
                 </div>
                 <div class="control-group">
@@ -595,14 +595,14 @@
             </div>
 
             <div class="card">
-                <h3>🔥 Station-wise Passenger Demand Heatmap</h3>
+                <h3>Station-wise Passenger Demand Heatmap</h3>
                 <div class="heatmap-container" id="heatmapContainer"></div>
                 <p style="color: #6c757d; font-size: 0.9em; margin-top: 10px;">Darker colors indicate higher passenger
                     congestion</p>
             </div>
 
             <div class="card">
-                <h3>📈 Historical vs AI-Predicted Demand</h3>
+                <h3>Historical vs AI-Predicted Demand</h3>
                 <div class="chart-container">
                     <canvas id="historicalVsPredictedChart"></canvas>
                 </div>
@@ -613,7 +613,7 @@
         <div class="tab-content">
             <div class="grid">
                 <div class="card">
-                    <h3>⚙️ Planning Inputs</h3>
+                    <h3>Planning Inputs</h3>
                     <div class="control-group" style="margin-bottom: 15px;">
                         <label>Available Trains</label>
                         <input type="range" id="availableTrains" min="2" max="20" value="10"
@@ -644,9 +644,9 @@
         <div class="tab-content">
             <div class="grid">
                 <div class="card">
-                    <h3>⚙️ Scenario Inputs</h3>
+                    <h3>Scenario Inputs</h3>
                     <div class="control-group" style="margin-bottom: 15px;">
-                        <label>📅 Select Scenario Date</label>
+                        <label>Select Scenario Date</label>
                         <input type="date" id="scenarioDate">
                     </div>
                     <div class="control-group" style="margin-bottom: 15px;">
@@ -662,17 +662,17 @@
                         <span id="unavailableDisplay">2</span>
                     </div>
                     <div class="control-group" style="margin-bottom: 15px;">
-                        <label>🌦️ Special Events</label>
+                        <label>Special Events</label>
                         <div style="display: flex; gap: 15px; margin-top: 10px;">
                             <label><input type="checkbox" id="rain"> Rain</label>
                             <label><input type="checkbox" id="festival"> Festival</label>
                         </div>
                     </div>
-                    <button class="btn" onclick="runSimulation()" style="width: 100%;">🔁 Run Simulation</button>
+                    <button class="btn" onclick="runSimulation()" style="width: 100%;">Run Simulation</button>
                 </div>
 
                 <div class="card" style="grid-column: span 2;">
-                    <h3>📊 Simulation Results</h3>
+                    <h3>Simulation Results</h3>
                     <div id="simulationResults">
                         <div class="info-box">Adjust scenario parameters and click <strong>Run Simulation</strong></div>
                     </div>
@@ -683,13 +683,13 @@
     <script>
         const MIN_TRAINS = 2;
         const MAX_TRAINS = 20;
-        const API_BASE = "http://127.0.0.1:8000/api";
+        const API_BASE = "http://127.0.0.1:8001/api";
         const TRAIN_CAPACITY = 400; // Passengers per train
 
         // ========== WEATHER API ==========
         async function getWeatherData(city = "Kochi") {
             try {
-                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=4bbb090bd7be475fabb71537262301&q=${city}&aqi=no`);
+                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=&q=${city}&aqi=no`);
                 const d = await res.json();
                 return {
                     temp: d.current.temp_c,
@@ -809,7 +809,7 @@
 
             try {
                 // Fetch real station status from AI backend
-                const res = await fetch(`${API_BASE}/line/status?hour=${hour}&day_type=${dayType}`);
+                const res = await fetch(`${API_BASE}/demand/line/status?hour=${hour}&day_type=${dayType}`);
                 const data = await res.json();
 
                 if (data.error) throw new Error(data.error);
@@ -822,10 +822,6 @@
                             <span class="station-name">${item.station}</span>
                             <div class="station-spacer"></div>
                             <div class="station-metrics">
-                                <span class="passenger-count">${item.passengers} passengers</span>
-                                <span class="status-dot" style="background-color: ${statusColor};"></span>
-                                <span class="status-label">${item.status}</span>
-                                <span class="train-icon">${isTrainHere}</span>
                             </div>
                         </div>
                     `;
@@ -935,7 +931,7 @@
                 `;
 
                 updateKPIs(predictedDemand, recommendedTrains);
-                updateChart(predictedDemand, hour);
+                updateChart(hour, predictedDemand);
                 updateMetroLineStatus();
 
             } catch (error) {
@@ -977,7 +973,7 @@
 
             try {
                 // Fetch 12-hour trend from AI backend
-                const res = await fetch(`${API_BASE}/trend?start_hour=${hour}&day_type=${dayType}`);
+                const res = await fetch(`${API_BASE}/demand/trend?start_hour=${hour}&day_type=${dayType}`);
                 const trendData = await res.json();
 
                 if (trendData.error) throw new Error(trendData.error);
@@ -1144,39 +1140,34 @@
             return "#b71c1c"; // Peak
         }
 
-        /* ========== FETCH REAL HISTORICAL DEMAND FROM BACKEND ========== */
-        async function getHistoricalDemandFromBackend(dayType, startHour, endHour) {
-            try {
-                const response = await fetch(`${API_BASE}/demand/historical?day_type=${dayType}&start_hour=${startHour}&end_hour=${endHour}`);
-                const data = await response.json();
-                
-                if (data.historical && data.hours) {
-                    return {
-                        hours: data.hours,
-                        historical: data.historical,
-                        success: true
-                    };
-                }
-            } catch (e) {
-                console.error("Historical Demand API Error:", e);
-            }
-            
-            // Fallback if API fails
-            return {
-                hours: [],
-                historical: [],
-                success: false,
-                error: "Failed to fetch historical data"
-            };
-        }
+        /* ========== GENERATE SIMULATED HISTORICAL DEMAND ========== */
+        function generateHistoricalDemand(hour, dayType) {
+            // Base pattern: higher during peak hours, lower at night
+            let baseDemand = 2000; // Base late night demand
 
-        /* Generate Historical Demand (REMOVED - Now using real backend data) */
-        /* This function has been removed. Historical demand is now fetched from backend API */
-        /* See getHistoricalDemandFromBackend() below */
+            if (hour >= 6 && hour < 8) baseDemand = 3500; // Morning commute start
+            if (hour >= 8 && hour < 10) baseDemand = 6500; // Morning peak
+            if (hour >= 10 && hour < 12) baseDemand = 4500; // Mid-morning
+            if (hour >= 12 && hour < 14) baseDemand = 4000; // Lunch hours
+            if (hour >= 14 && hour < 16) baseDemand = 3500; // Afternoon
+            if (hour >= 16 && hour < 17) baseDemand = 4500; // Afternoon commute start
+            if (hour >= 17 && hour < 20) baseDemand = 7000; // Evening peak
+            if (hour >= 20 && hour < 22) baseDemand = 5000; // Late evening
+            if (hour >= 22) baseDemand = 2500; // Night
+
+            // Weekend variation (lower demand)
+            if (dayType === "weekend") {
+                baseDemand *= 0.75;
+            }
+
+            // Add random variation (±10%)
+            const variation = baseDemand * (0.9 + Math.random() * 0.2);
+            return Math.round(variation);
+        }
 
         let historicalVsPredictedChart;
 
-        /* Generate Historical vs AI-Predicted Demand Chart (uses REAL backend data) */
+        /* Generate Historical vs AI-Predicted Demand Chart (uses cached data) */
         async function generateHistoricalVsPredictedChart(timeStart, timeEnd, dayType, cachedPredictedData) {
             const ctx = document.getElementById("historicalVsPredictedChart");
 
@@ -1187,30 +1178,19 @@
             }
 
             try {
-                // Fetch REAL historical demand from backend
-                const historicalResult = await getHistoricalDemandFromBackend(dayType, timeStart, timeEnd);
-                
                 const labels = [];
                 const historicalData = [];
                 const predictedData = [];
 
-                // Build chart data using REAL historical data
-                if (historicalResult.success && historicalResult.hours.length > 0) {
-                    // Use backend historical data
-                    for (let i = 0; i < historicalResult.hours.length; i++) {
-                        const hour = historicalResult.hours[i];
-                        labels.push(`${hour}:00`);
-                        historicalData.push(historicalResult.historical[i]);
-                        predictedData.push(cachedPredictedData[hour] || 5000);
-                    }
-                } else {
-                    // Fallback: just use predicted data without historical comparison
-                    console.warn("Historical data unavailable, showing predicted data only");
-                    for (let hour = timeStart; hour <= timeEnd; hour++) {
-                        labels.push(`${hour}:00`);
-                        historicalData.push(null); // No historical data available
-                        predictedData.push(cachedPredictedData[hour] || 5000);
-                    }
+                // Build chart data using cached predictions (NO additional API calls)
+                for (let hour = timeStart; hour <= timeEnd; hour++) {
+                    labels.push(`${hour}:00`);
+
+                    // Historical demand (simulated based on patterns)
+                    historicalData.push(generateHistoricalDemand(hour, dayType));
+
+                    // Use cached predicted demand
+                    predictedData.push(cachedPredictedData[hour]);
                 }
 
                 const chartCtx = ctx.getContext("2d");
