@@ -50,7 +50,7 @@ An end-to-end, AI-driven operations management platform for the **Kochi Metro Ra
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Abishakm1507/ai-train-induction-planning-and-scheduling
    cd ai-train-induction-planning-and-scheduling
    ```
 
